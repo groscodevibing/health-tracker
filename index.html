@@ -1,0 +1,1350 @@
+<!DOCTYPE html>
+<!-- CACHE_VERSION: 1 -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>GutTracker</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d1b2a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0d1b2a;--n1:#152236;--n2:#1e3a5f;--n3:#2a4a73;
+  --amber:#f59e0b;--amber2:#fcd34d;--amber3:#78350f;
+  --white:#f8fafc;--dim:#94a3b8;
+  --red:#ef4444;--redbg:#450a0a;
+  --green:#22c55e;--orange:#f97316;
+  --card:#152236;--border:#1e3a5f;
+  --r:14px;--rs:8px;
+  --hh:60px;--tbh:65px;
+  --sb:env(safe-area-inset-bottom,0px);
+}
+html,body{height:100%;background:var(--navy);color:var(--white);font-family:'Inter',system-ui,sans-serif;font-size:16px;line-height:1.5;overflow:hidden}
+#app{display:flex;flex-direction:column;height:100dvh;max-width:540px;margin:0 auto;position:relative}
+
+/* HEADER */
+#hdr{background:var(--n1);border-bottom:1px solid var(--border);padding:0 16px;height:var(--hh);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;z-index:100}
+#hdr h1{font-size:18px;font-weight:700;color:var(--amber)}
+.hsubt{font-size:12px;color:var(--dim);margin-top:1px}
+.hleft{display:flex;flex-direction:column}
+.hright{display:flex;align-items:center;gap:8px}
+.ico-btn{width:40px;height:40px;background:var(--n2);border:none;border-radius:var(--rs);color:var(--white);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;flex-shrink:0}
+.dnav{display:flex;align-items:center;gap:4px}
+.dnav button{width:32px;height:32px;background:var(--n2);border:none;border-radius:6px;color:var(--white);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center}
+#datenow{background:var(--n2);border:none;border-radius:6px;color:var(--white);cursor:pointer;padding:4px 10px;font-size:13px;font-weight:500;font-family:inherit}
+
+/* PROGRESS */
+#progbar{background:var(--n1);padding:8px 16px;border-bottom:1px solid var(--border);display:none}
+#progbar.on{display:block}
+.plabel{display:flex;justify-content:space-between;font-size:12px;color:var(--dim);margin-bottom:6px}
+.ptrack{height:4px;background:var(--n2);border-radius:2px}
+.pfill{height:100%;background:var(--amber);border-radius:2px;transition:width .4s ease}
+
+/* ALERT */
+#alert{margin:12px 16px 0;padding:14px 16px;background:var(--redbg);border:1.5px solid var(--red);border-radius:var(--r);display:none}
+#alert.on{display:block}
+.at{font-size:14px;font-weight:700;color:var(--red);margin-bottom:6px}
+#alist{list-style:none}
+#alist li{font-size:13px;color:#fca5a5;padding:2px 0}
+#alist li::before{content:'• '}
+.asub{font-size:12px;color:#fca5a5;margin-top:8px}
+
+/* MAIN */
+#main{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+.tab{display:none;padding:16px 16px calc(var(--tbh) + var(--sb) + 16px);min-height:100%;animation:fi .2s ease}
+.tab.on{display:block}
+@keyframes fi{from{opacity:0;transform:translateY(4px)}to{opacity:1}}
+
+/* TAB BAR */
+#tbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:540px;height:calc(var(--tbh) + var(--sb));padding-bottom:var(--sb);background:var(--n1);border-top:1px solid var(--border);display:flex;z-index:200}
+.tbtn{flex:1;background:none;border:none;color:var(--dim);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-family:inherit;font-size:10px;font-weight:500;padding:0}
+.tbtn .ti{font-size:22px}
+.tbtn.on{color:var(--amber)}
+
+/* CARDS */
+.sc{background:var(--card);border:1px solid var(--border);border-radius:var(--r);margin-bottom:12px;padding:16px}
+.stitle{font-size:12px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.8px;margin-bottom:14px}
+.ec{background:var(--n2);border-radius:var(--rs);margin-bottom:8px;overflow:hidden}
+.ech{display:flex;align-items:center;padding:12px 14px;gap:10px;cursor:pointer}
+.ect{flex:1;font-size:14px;font-weight:500}
+.ecm{font-size:12px;color:var(--dim)}
+.echev{font-size:12px;color:var(--dim);transition:transform .25s}
+.ec.open .echev{transform:rotate(180deg)}
+.ecb{display:none;padding:0 14px 14px}
+.ec.open .ecb{display:block}
+.edel{width:28px;height:28px;border-radius:6px;background:var(--redbg);border:none;color:var(--red);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+
+/* FORMS */
+.fg{margin-bottom:14px}
+.fl{display:block;font-size:13px;font-weight:500;color:var(--dim);margin-bottom:6px}
+input[type=text],input[type=number],input[type=time],input[type=date],textarea,select{width:100%;background:var(--navy);border:1px solid var(--border);border-radius:var(--rs);color:var(--white);font-family:inherit;font-size:15px;padding:10px 12px;outline:none;transition:border-color .2s;-webkit-appearance:none;appearance:none}
+input:focus,textarea:focus,select:focus{border-color:var(--amber)}
+input[type=number]{width:auto;min-width:80px}
+textarea{resize:vertical;min-height:80px}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:36px}
+option{background:var(--n1)}
+
+/* TOGGLE */
+.trow{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}
+.trow:last-child{border-bottom:none}
+.tl{font-size:14px}
+.tog{position:relative;width:46px;height:26px;flex-shrink:0}
+.tog input{opacity:0;width:0;height:0}
+.ts{position:absolute;inset:0;background:var(--n2);border-radius:13px;cursor:pointer;transition:background .2s}
+.ts::before{content:'';position:absolute;width:20px;height:20px;left:3px;top:3px;background:var(--white);border-radius:50%;transition:transform .2s}
+.tog input:checked+.ts{background:var(--amber)}
+.tog input:checked+.ts::before{transform:translateX(20px)}
+
+/* SLIDER */
+.sr{display:flex;align-items:center;gap:10px}
+.sv{min-width:28px;height:28px;background:var(--amber);color:var(--navy);border-radius:6px;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+input[type=range]{flex:1;height:6px;background:var(--n2);border-radius:3px;border:none;outline:none;cursor:pointer;-webkit-appearance:none;appearance:none;padding:0}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;background:var(--amber);border-radius:50%;cursor:pointer;border:3px solid var(--navy)}
+input[type=range]::-moz-range-thumb{width:22px;height:22px;background:var(--amber);border-radius:50%;cursor:pointer;border:3px solid var(--navy)}
+
+/* RADIO */
+.rg{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.ro input{display:none}
+.ro label{display:block;padding:8px 14px;background:var(--navy);border:1.5px solid var(--border);border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s}
+.ro input:checked+label{background:var(--amber);border-color:var(--amber);color:var(--navy)}
+
+/* YES/NO */
+.yng{display:flex;gap:8px;margin-top:4px}
+.ynb{flex:1;padding:10px;background:var(--navy);border:1.5px solid var(--border);border-radius:var(--rs);color:var(--white);font-family:inherit;font-size:14px;font-weight:500;cursor:pointer;transition:all .2s}
+.ynb.yes.on{background:#166534;border-color:var(--green);color:var(--green)}
+.ynb.no.on{background:#1e1e1e;border-color:var(--dim);color:var(--dim)}
+
+/* BRISTOL */
+.bg{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:4px}
+.bi{display:flex;flex-direction:column;align-items:center;padding:8px 2px;background:var(--navy);border:1.5px solid var(--border);border-radius:var(--rs);cursor:pointer;transition:all .2s;gap:2px}
+.bi.on{background:var(--amber);border-color:var(--amber);color:var(--navy)}
+.bnum{font-size:12px;font-weight:700}
+.bemo{font-size:15px}
+.bhint{font-size:11px;color:var(--amber);margin-top:6px}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 20px;background:var(--amber);color:var(--navy);border:none;border-radius:var(--rs);font-family:inherit;font-size:15px;font-weight:600;cursor:pointer;transition:all .2s;width:100%}
+.btn:hover{background:var(--amber2)}
+.btn-s{background:var(--n2);color:var(--white)}
+.btn-s:hover{background:var(--n3)}
+.btn-d{background:var(--redbg);color:var(--red);border:1px solid var(--red)}
+.add-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px;background:var(--n2);border:1.5px dashed var(--n3);border-radius:var(--rs);color:var(--amber);font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;margin-top:8px}
+.add-btn:hover{background:var(--n3);border-color:var(--amber)}
+
+/* MODAL */
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;display:none;align-items:flex-end}
+.mo.on{display:flex;animation:su .3s ease}
+@keyframes su{from{opacity:0}to{opacity:1}}
+.mc{background:var(--n1);border-radius:var(--r) var(--r) 0 0;width:100%;max-height:90dvh;overflow-y:auto;padding:20px 20px calc(20px + var(--sb))}
+.mh{width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 20px}
+.mt{font-size:18px;font-weight:700;margin-bottom:20px}
+
+/* CALENDAR */
+.cnav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.cnav button{width:36px;height:36px;background:var(--n2);border:none;border-radius:8px;color:var(--white);cursor:pointer;font-size:18px}
+.cm{font-size:16px;font-weight:600}
+.cgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cdh{text-align:center;font-size:11px;font-weight:600;color:var(--dim);padding:6px 0}
+.cd{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s}
+.cd:hover{opacity:.8}
+.cd.emp{opacity:0;pointer-events:none}
+.cd.tod{outline:2px solid var(--amber)}
+.cd.nd{color:var(--dim)}
+.p0{background:#166534;color:#fff}.p1{background:#15803d;color:#fff}.p2{background:#4d7c0f;color:#fff}
+.p3{background:#713f12;color:#fff}.p4{background:#92400e;color:#fff}.p5{background:#b45309;color:#fff}
+.p6{background:#c2410c;color:#fff}.p7{background:#b91c1c;color:#fff}.p8{background:#991b1b;color:#fff}
+.p9{background:#7f1d1d;color:#fff}.p10{background:#7f1d1d;color:#fff}
+
+/* CHARTS */
+.ccon{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:12px}
+.ctit{font-size:12px;font-weight:600;color:var(--amber);margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px}
+
+/* HBI */
+.hbir{background:var(--n2);border-radius:var(--r);padding:16px;margin-top:16px;text-align:center}
+.hbis{font-size:48px;font-weight:700;color:var(--amber);line-height:1}
+.hbib{font-size:18px;font-weight:600;margin-top:8px}
+.hbib.remission{color:var(--green)}.hbib.mild{color:#fbbf24}.hbib.moderate{color:var(--orange)}.hbib.severe{color:var(--red)}
+.hbid{font-size:12px;color:var(--dim);margin-top:12px;text-align:left}
+
+/* EXPORT */
+.exs{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:16px}
+.exs h3{font-size:16px;font-weight:700;margin-bottom:6px}
+.exs p{font-size:13px;color:var(--dim);margin-bottom:14px}
+.rsel{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.rb{padding:6px 12px;background:var(--n2);border:1px solid var(--border);border-radius:20px;color:var(--white);font-family:inherit;font-size:12px;font-weight:500;cursor:pointer;transition:all .2s}
+.rb.on{background:var(--amber);border-color:var(--amber);color:var(--navy)}
+.crange{display:none;gap:8px;margin-bottom:12px;align-items:center}
+.crange.on{display:flex}
+.crange input{flex:1}
+
+/* WEEKLY */
+.pq p{font-size:13px;margin-bottom:8px;color:var(--dim)}
+.srow{display:flex;gap:6px}
+.sb{flex:1;padding:10px 4px;background:var(--navy);border:1.5px solid var(--border);border-radius:var(--rs);color:var(--white);font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;text-align:center}
+.sb.on{background:var(--amber);border-color:var(--amber);color:var(--navy)}
+
+/* SETTINGS */
+.sg{margin-bottom:24px}
+.sgt{font-size:12px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px}
+
+/* MISC */
+.r2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.r3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.divid{height:1px;background:var(--border);margin:16px 0}
+.emp-st{text-align:center;padding:40px 20px;color:var(--dim)}
+.emp-st .ei{font-size:40px;margin-bottom:12px}
+.dsi{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:14px}
+.dsi:last-child{border-bottom:none}
+.dsk{color:var(--dim)}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+@media(min-width:540px){#tbar{left:auto;transform:none}}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="hdr">
+    <div class="hleft">
+      <h1>🌿 GutTracker</h1>
+      <span class="hsubt" id="hsubt">Gut Health Journal</span>
+    </div>
+    <div class="hright">
+      <div class="dnav" id="dnav" style="display:none">
+        <button onclick="G.pd()">‹</button>
+        <button id="datenow" onclick="G.gt()">Today</button>
+        <button onclick="G.nd()">›</button>
+      </div>
+      <button class="ico-btn" onclick="G.openSet()">⚙️</button>
+    </div>
+  </div>
+  <div id="progbar">
+    <div class="plabel"><span>Log completion</span><span id="ptxt">0%</span></div>
+    <div class="ptrack"><div class="pfill" id="pfill" style="width:0%"></div></div>
+  </div>
+  <div id="alert">
+    <div class="at">⚠️ Medical Alert</div>
+    <ul id="alist"></ul>
+    <div class="asub">This symptom may require medical attention. Consider contacting your doctor or gastroenterologist.</div>
+  </div>
+  <div id="main">
+    <div id="tab-daily" class="tab on"></div>
+    <div id="tab-weekly" class="tab"></div>
+    <div id="tab-history" class="tab"></div>
+    <div id="tab-export" class="tab"></div>
+  </div>
+  <nav id="tbar">
+    <button class="tbtn on" onclick="G.sw('daily')" id="btn-daily"><span class="ti">📋</span><span>Daily</span></button>
+    <button class="tbtn" onclick="G.sw('weekly')" id="btn-weekly"><span class="ti">📅</span><span>Weekly</span></button>
+    <button class="tbtn" onclick="G.sw('history')" id="btn-history"><span class="ti">📊</span><span>History</span></button>
+    <button class="tbtn" onclick="G.sw('export')" id="btn-export"><span class="ti">📤</span><span>Export</span></button>
+  </nav>
+</div>
+
+<!-- Settings Modal -->
+<div class="mo" id="mo-set" onclick="G.closeMo('set')">
+  <div class="mc" onclick="event.stopPropagation()">
+    <div class="mh"></div>
+    <div class="mt">⚙️ Settings</div>
+    <div id="set-body"></div>
+    <button class="btn" onclick="G.saveSet()" style="margin-top:16px">Save Settings</button>
+    <button class="btn btn-d" onclick="G.clearAll()" style="margin-top:8px">🗑️ Clear All Data</button>
+    <button class="btn btn-s" onclick="G.closeMo('set')" style="margin-top:8px">Cancel</button>
+  </div>
+</div>
+
+<!-- Day Summary Modal -->
+<div class="mo" id="mo-day" onclick="G.closeMo('day')">
+  <div class="mc" onclick="event.stopPropagation()">
+    <div class="mh"></div>
+    <div id="day-body"></div>
+    <button class="btn btn-s" onclick="G.closeMo('day')" style="margin-top:16px">Close</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+// CACHE_VERSION: 1
+
+const G = (() => {
+  const KEY = 'guttracker_data';
+
+  // ── Bristol descriptions ──────────────────────────────────
+  const BST = {
+    1:{e:'🪨',l:'Separate hard lumps',h:'Severe constipation'},
+    2:{e:'💩',l:'Lumpy sausage',h:'Mild constipation'},
+    3:{e:'🌭',l:'Cracked sausage shape',h:'Normal range'},
+    4:{e:'✅',l:'Smooth soft sausage',h:'Ideal stool'},
+    5:{e:'🫧',l:'Soft blobs, clear edges',h:'Lacking fibre'},
+    6:{e:'🌊',l:'Fluffy, mushy pieces',h:'Mild diarrhoea'},
+    7:{e:'💧',l:'Entirely liquid',h:'Severe diarrhoea'}
+  };
+
+  // ── State ─────────────────────────────────────────────────
+  let tab = 'daily';
+  let curD = tday();
+  let calY, calM;
+  let CH = {};
+
+  // ── Storage ───────────────────────────────────────────────
+  function load() {
+    try { return JSON.parse(localStorage.getItem(KEY)) || base(); }
+    catch { return base(); }
+  }
+  function save(d) { localStorage.setItem(KEY, JSON.stringify(d)); }
+  function base() { return {settings: defSet(), days:{}, weeks:{}}; }
+
+  function defSet() {
+    return {userName:'',dob:'',showMen:false,hasCrohns:false,weekDay:1,notif:false};
+  }
+  function defDay() {
+    return {
+      bms:[],
+      sym:{pain:0,ploc:'none',bloat:0,gas:0,nausea:0,hburn:0,mass:false},
+      sys:{well:0,fatigue:0,fever:false,temp:'',jPain:false,jSev:0,skin:'none',eye:false,mouth:false},
+      life:{stress:3,sleepH:'',sleepQ:3,noct:false,exer:'none',exerMin:'',hydra:8,caff:0,alco:0,men:''},
+      meds:[],meals:[],note:''
+    };
+  }
+  function defWeek() {
+    return {weight:'',ppain:[0,0,0],pbloa:[0,0,0],pdia:[0,0,0],bsat:3};
+  }
+
+  function getDay(d) {
+    const data = load();
+    return data.days[d] ? merge(defDay(), data.days[d]) : defDay();
+  }
+  function putDay(d, day) { const data=load(); data.days[d]=day; save(data); }
+  function getWk(w) { const data=load(); return data.weeks[w] ? {...defWeek(),...data.weeks[w]} : defWeek(); }
+  function putWk(w, wk) { const data=load(); data.weeks[w]=wk; save(data); }
+  function getSets() { return {...defSet(),...load().settings}; }
+  function putSets(s) { const data=load(); data.settings=s; save(data); }
+
+  function merge(t, s) {
+    const o={...t};
+    for (const k of Object.keys(s)) {
+      if (s[k]!==null && typeof s[k]==='object' && !Array.isArray(s[k]))
+        o[k]=merge(t[k]||{},s[k]);
+      else o[k]=s[k];
+    }
+    return o;
+  }
+
+  // ── Utilities ─────────────────────────────────────────────
+  function uid() { return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+  function tday() { return new Date().toISOString().split('T')[0]; }
+  function now() { const d=new Date(); return p2(d.getHours())+':'+p2(d.getMinutes()); }
+  function p2(n) { return String(n).padStart(2,'0'); }
+  function addD(ds, n) { const d=new Date(ds+'T12:00:00'); d.setDate(d.getDate()+n); return d.toISOString().split('T')[0]; }
+  function fmtS(ds) { return new Date(ds+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'}); }
+  function fmtL(ds) { return new Date(ds+'T12:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'}); }
+
+  function isoWeek(ds) {
+    const d=new Date(ds+'T12:00:00');
+    const dow=d.getUTCDay()||7;
+    d.setUTCDate(d.getUTCDate()+4-dow);
+    const y1=new Date(Date.UTC(d.getUTCFullYear(),0,1));
+    const wn=Math.ceil((((d-y1)/864e5)+1)/7);
+    return d.getUTCFullYear()+'-W'+p2(wn);
+  }
+
+  function wkStart(ws) {
+    const [yr,wn]=[parseInt(ws),parseInt(ws.split('-W')[1])];
+    const j4=new Date(yr,0,4);
+    const dow=j4.getDay()||7;
+    const m1=new Date(j4.getTime()-(dow-1)*864e5);
+    m1.setDate(m1.getDate()+(wn-1)*7);
+    return m1.toISOString().split('T')[0];
+  }
+  function wkEnd(ws) { return addD(wkStart(ws),6); }
+
+  function range(from, to) {
+    const out=[]; let c=from;
+    while(c<=to){ out.push(c); c=addD(c,1); }
+    return out;
+  }
+
+  // ── HBI Calculation ───────────────────────────────────────
+  function hbi(ws) {
+    const data=load();
+    const days=Object.entries(data.days)
+      .filter(([d])=>isoWeek(d)===ws)
+      .map(([,v])=>merge(defDay(),v));
+    if(!days.length) return null;
+
+    const avgWell=days.reduce((s,d)=>s+(d.sys.well||0),0)/days.length;
+    const wellSc=Math.round(avgWell);
+
+    const avgPain=days.reduce((s,d)=>s+(d.sym.pain||0),0)/days.length;
+    const painSc=avgPain===0?0:avgPain<=3?1:avgPain<=6?2:3;
+
+    const avgLiq=days.reduce((s,d)=>s+d.bms.filter(b=>b.liq).length,0)/days.length;
+
+    const hasMass=days.some(d=>d.sym.mass);
+    const massSc=hasMass?2:0;
+
+    const comp=new Set();
+    days.forEach(d=>{
+      if(d.sys.jPain)comp.add('j');
+      if(d.sys.skin!=='none')comp.add('s');
+      if(d.sys.eye)comp.add('e');
+      if(d.sys.mouth)comp.add('m');
+    });
+
+    const total=wellSc+painSc+Math.round(avgLiq)+massSc+comp.size;
+    const band=total<5?'Remission':total<=7?'Mild':total<=16?'Moderate':'Severe';
+    return {total,band,wellSc,painSc,avgLiq:Math.round(avgLiq*10)/10,massSc,compSc:comp.size};
+  }
+
+  // ── Red flags ─────────────────────────────────────────────
+  function flags(ds) {
+    const day=getDay(ds);
+    const sets=getSets();
+    const out=[];
+    day.bms.forEach(b=>{
+      if(b.col==='black') out.push('Black/tarry stool — possible GI bleed');
+      if(b.bleed==='mild'||b.bleed==='heavy') out.push(`Rectal bleeding: ${b.bleed}`);
+    });
+    if(day.life.noct) out.push('GI symptoms woke you from sleep');
+    const liq=day.bms.filter(b=>b.liq).length;
+    if(day.sys.fever&&liq>6) out.push(`Fever with ${liq} liquid stools today`);
+    if(sets.hasCrohns){
+      const h=hbi(isoWeek(ds));
+      if(h&&h.total>=8) out.push(`HBI score ${h.total} — moderate/severe Crohn's activity`);
+    }
+    return out;
+  }
+
+  function updAlerts(ds) {
+    const f=tab==='daily'?flags(ds):[];
+    const box=document.getElementById('alert');
+    const list=document.getElementById('alist');
+    if(f.length){
+      list.innerHTML=f.map(x=>`<li>${x}</li>`).join('');
+      box.classList.add('on');
+    } else box.classList.remove('on');
+  }
+
+  // ── Progress ──────────────────────────────────────────────
+  function updProg(ds) {
+    const day=getDay(ds);
+    let f=0,t=12;
+    if(day.bms.length>0)f++;
+    if(day.sym.pain>0||day.sym.ploc!=='none')f++;
+    if(day.sym.bloat>0)f++;
+    if(day.sym.nausea>0)f++;
+    if(day.sym.gas>0)f++;
+    if(day.sys.fatigue>0)f++;
+    if(day.life.sleepH!=='')f++;
+    if(day.life.stress>0)f++;
+    if(day.life.hydra>=0)f++;
+    if(day.life.exer!=='none')f++;
+    if(day.meals.length>0)f++;
+    if(day.note.trim())f++;
+    const pct=Math.round(f/t*100);
+    document.getElementById('pfill').style.width=pct+'%';
+    document.getElementById('ptxt').textContent=`${f}/${t} fields`;
+  }
+
+  // ── Tab switching ─────────────────────────────────────────
+  function sw(t) {
+    tab=t;
+    document.querySelectorAll('.tab').forEach(e=>e.classList.remove('on'));
+    document.querySelectorAll('.tbtn').forEach(e=>e.classList.remove('on'));
+    document.getElementById('tab-'+t).classList.add('on');
+    document.getElementById('btn-'+t).classList.add('on');
+    const dn=document.getElementById('dnav');
+    const pb=document.getElementById('progbar');
+    dn.style.display=t==='daily'?'flex':'none';
+    pb.classList.toggle('on',t==='daily');
+    if(t!=='daily') document.getElementById('alert').classList.remove('on');
+    if(t==='daily'){rDaily();updProg(curD);updAlerts(curD);}
+    else if(t==='weekly') rWeekly();
+    else if(t==='history') rHistory();
+    else rExport();
+    document.getElementById('main').scrollTop=0;
+  }
+
+  function pd(){curD=addD(curD,-1);rDaily();updProg(curD);updAlerts(curD);}
+  function nd(){const nx=addD(curD,1);if(nx>tday())return;curD=nx;rDaily();updProg(curD);updAlerts(curD);}
+  function gt(){curD=tday();rDaily();updProg(curD);updAlerts(curD);}
+
+  // ── Rerender helper ───────────────────────────────────────
+  function rr(){rDaily();updProg(curD);updAlerts(curD);}
+
+  // ── DAILY LOG ─────────────────────────────────────────────
+  function rDaily() {
+    const s=getSets();
+    const day=getDay(curD);
+    const isT=curD===tday();
+    document.getElementById('datenow').textContent=isT?'Today':fmtS(curD);
+    const sc=document.getElementById('main').scrollTop;
+    document.getElementById('tab-daily').innerHTML=
+      bmSec(day,s)+symSec(day)+sysSec(day,s)+lifeSec(day,s)+medSec(day)+mealSec(day)+noteSec(day);
+    document.getElementById('main').scrollTop=sc;
+  }
+
+  // Bowel movements section
+  function bmSec(day,s) {
+    const cards=day.bms.map((b,i)=>bmCard(b,i,s)).join('');
+    return `<div class="sc"><div class="stitle">🚽 Bowel Movements (${day.bms.length})</div>
+      <div id="bml">${cards}</div>
+      <button class="add-btn" onclick="G.addBM()">+ Add Bowel Movement</button></div>`;
+  }
+
+  function bmCard(b,i,s) {
+    const bf=BST[b.bst]||BST[4];
+    const title=b.bst?`Type ${b.bst} ${bf.e}`:'New Entry';
+    return `<div class="ec" id="bm-${b.id}">
+      <div class="ech" onclick="G.tc('bm-${b.id}')">
+        <span class="ect">${title}</span>
+        <span class="ecm">${b.tm||''}</span>
+        <span class="echev">▾</span>
+        <button class="edel" onclick="event.stopPropagation();G.delBM('${b.id}')">✕</button>
+      </div>
+      <div class="ecb">
+        <div class="fg"><label class="fl">Time</label>
+          <input type="time" value="${b.tm||''}" onchange="G.uBM('${b.id}','tm',this.value)"></div>
+        <div class="fg"><label class="fl">Bristol Stool Scale</label>
+          <div class="bg">${[1,2,3,4,5,6,7].map(n=>`
+            <div class="bi${b.bst===n?' on':''}" onclick="G.uBM('${b.id}','bst',${n});G.rfBM('${b.id}')"
+              title="${BST[n].l} — ${BST[n].h}">
+              <span class="bnum">${n}</span><span class="bemo">${BST[n].e}</span>
+            </div>`).join('')}</div>
+          ${b.bst?`<div class="bhint">${BST[b.bst].l} — ${BST[b.bst].h}</div>`:''}</div>
+        <div class="r3">
+          <div class="fg"><label class="fl">Quantity</label>
+            <select onchange="G.uBM('${b.id}','qty',this.value)">
+              <option value="small"${b.qty==='small'?' selected':''}>Small</option>
+              <option value="medium"${b.qty==='medium'?' selected':''}>Medium</option>
+              <option value="large"${b.qty==='large'?' selected':''}>Large</option>
+            </select></div>
+          <div class="fg"><label class="fl">Colour</label>
+            <select onchange="G.uBM('${b.id}','col',this.value);G.odc()">
+              <option value="brown"${b.col==='brown'?' selected':''}>Brown</option>
+              <option value="pale"${b.col==='pale'?' selected':''}>Pale</option>
+              <option value="dark"${b.col==='dark'?' selected':''}>Dark</option>
+              <option value="black"${b.col==='black'?' selected':''}>⚫ Black/Tarry</option>
+              <option value="red"${b.col==='red'?' selected':''}>🔴 Red</option>
+              <option value="yellow"${b.col==='yellow'?' selected':''}>Yellow</option>
+            </select></div>
+          <div class="fg"><label class="fl">Liquid?</label>
+            <div class="yng">
+              <button class="ynb yes${b.liq?' on':''}" onclick="G.uBM('${b.id}','liq',true);G.rfBM('${b.id}')">Yes</button>
+              <button class="ynb no${!b.liq?' on':''}" onclick="G.uBM('${b.id}','liq',false);G.rfBM('${b.id}')">No</button>
+            </div></div></div>
+        <div class="r3">
+          ${['Straining','Urgency','Incomplete?'].map((lbl,idx)=>{
+            const fk=['str','urg','inc'][idx];
+            return `<div class="fg"><label class="fl">${lbl}</label>
+              <div class="yng">
+                <button class="ynb yes${b[fk]?' on':''}" onclick="G.uBM('${b.id}','${fk}',true);G.rfBM('${b.id}')">Yes</button>
+                <button class="ynb no${!b[fk]?' on':''}" onclick="G.uBM('${b.id}','${fk}',false);G.rfBM('${b.id}')">No</button>
+              </div></div>`;
+          }).join('')}</div>
+        <div class="r2">
+          <div class="fg"><label class="fl">Rectal Bleeding</label>
+            <select onchange="G.uBM('${b.id}','bleed',this.value);G.odc()">
+              <option value="none"${(!b.bleed||b.bleed==='none')?' selected':''}>None</option>
+              <option value="spotting"${b.bleed==='spotting'?' selected':''}>Spotting</option>
+              <option value="mild"${b.bleed==='mild'?' selected':''}>⚠️ Mild</option>
+              <option value="heavy"${b.bleed==='heavy'?' selected':''}>🚨 Heavy</option>
+            </select></div>
+          ${s.hasCrohns?`<div class="fg"><label class="fl">Perianal</label>
+            <select onchange="G.uBM('${b.id}','peri',this.value)">
+              <option value="none"${(!b.peri||b.peri==='none')?' selected':''}>None</option>
+              <option value="pain"${b.peri==='pain'?' selected':''}>Pain</option>
+              <option value="fissure"${b.peri==='fissure'?' selected':''}>Fissure</option>
+              <option value="fistula"${b.peri==='fistula'?' selected':''}>Fistula</option>
+              <option value="other"${b.peri==='other'?' selected':''}>Other</option>
+            </select></div>`:''}
+        </div>
+      </div></div>`;
+  }
+
+  // Symptoms section
+  function symSec(day) {
+    const s=day.sym;
+    return `<div class="sc"><div class="stitle">🫁 Abdominal Symptoms</div>
+      <div class="fg"><label class="fl">Abdominal Pain (0–10 NRS)</label>
+        <div class="sr"><input type="range" min="0" max="10" value="${s.pain||0}"
+          oninput="this.nextElementSibling.textContent=this.value;G.uSym('pain',+this.value)">
+          <div class="sv">${s.pain||0}</div></div></div>
+      <div class="fg"><label class="fl">Pain Location</label>
+        <div class="rg">${['none','upper','lower','diffuse','RLQ'].map(v=>`
+          <div class="ro"><input type="radio" name="ploc" id="pl-${v}" value="${v}"
+            ${s.ploc===v?'checked':''} onchange="G.uSym('ploc',this.value)">
+            <label for="pl-${v}">${v==='RLQ'?'Right Lower Q':v==='none'?'None':v.charAt(0).toUpperCase()+v.slice(1)}</label></div>
+        `).join('')}</div></div>
+      ${[['bloat','Bloating',4],['gas','Gas / Flatulence',4],['nausea','Nausea',4],['hburn','Heartburn / Reflux',4]].map(([k,lbl,mx])=>`
+        <div class="fg"><label class="fl">${lbl} (0–${mx})</label>
+          <div class="sr"><input type="range" min="0" max="${mx}" value="${s[k]||0}"
+            oninput="this.nextElementSibling.textContent=this.value;G.uSym('${k}',+this.value)">
+            <div class="sv">${s[k]||0}</div></div></div>`).join('')}
+      <div class="fg"><label class="fl">Abdominal Mass Felt?</label>
+        <div class="yng">
+          <button class="ynb yes${s.mass?' on':''}" onclick="G.uSym('mass',true);G.rr()">Yes</button>
+          <button class="ynb no${!s.mass?' on':''}" onclick="G.uSym('mass',false);G.rr()">No</button>
+        </div></div></div>`;
+  }
+
+  // Systemic section
+  function sysSec(day,s) {
+    const y=day.sys;
+    return `<div class="sc"><div class="stitle">🌡️ General &amp; Systemic${s.hasCrohns?' (IBD)':''}</div>
+      <div class="fg"><label class="fl">General Wellbeing</label>
+        <div class="rg">${[[0,'Great'],[1,'Slightly below par'],[2,'Poor'],[3,'Very poor'],[4,'Terrible']].map(([v,lbl])=>`
+          <div class="ro"><input type="radio" name="well" id="wb-${v}" value="${v}"
+            ${y.well===v?'checked':''} onchange="G.uSys('well',+this.value)">
+            <label for="wb-${v}">${v}: ${lbl}</label></div>`).join('')}</div></div>
+      <div class="fg"><label class="fl">Fatigue (0–10)</label>
+        <div class="sr"><input type="range" min="0" max="10" value="${y.fatigue||0}"
+          oninput="this.nextElementSibling.textContent=this.value;G.uSys('fatigue',+this.value)">
+          <div class="sv">${y.fatigue||0}</div></div></div>
+      <div class="trow"><span class="tl">Fever / Felt Feverish</span>
+        <label class="tog"><input type="checkbox" ${y.fever?'checked':''}
+          onchange="G.uSys('fever',this.checked);G.rr()">
+          <span class="ts"></span></label></div>
+      ${y.fever?`<div class="fg" style="margin-top:8px"><label class="fl">Temperature °C (optional)</label>
+        <input type="number" step="0.1" min="35" max="42" value="${y.temp||''}" placeholder="e.g. 38.5"
+          onchange="G.uSys('temp',this.value)"></div>`:''}
+      ${s.hasCrohns?`
+        <div class="trow"><span class="tl">Joint Pain</span>
+          <label class="tog"><input type="checkbox" ${y.jPain?'checked':''}
+            onchange="G.uSys('jPain',this.checked);G.rr()">
+            <span class="ts"></span></label></div>
+        ${y.jPain?`<div class="fg" style="margin-top:8px"><label class="fl">Joint Severity (0–4)</label>
+          <div class="sr"><input type="range" min="0" max="4" value="${y.jSev||0}"
+            oninput="this.nextElementSibling.textContent=this.value;G.uSys('jSev',+this.value)">
+            <div class="sv">${y.jSev||0}</div></div></div>`:''}
+        <div class="fg"><label class="fl">Skin Symptoms</label>
+          <div class="rg">${['none','rash','erythema nodosum','other'].map(v=>`
+            <div class="ro"><input type="radio" name="skin" id="sk-${v}" value="${v}"
+              ${y.skin===v?'checked':''} onchange="G.uSys('skin',this.value)">
+              <label for="sk-${v}">${v.charAt(0).toUpperCase()+v.slice(1)}</label></div>`).join('')}</div></div>
+        <div class="trow"><span class="tl">Eye Inflammation</span>
+          <label class="tog"><input type="checkbox" ${y.eye?'checked':''}
+            onchange="G.uSys('eye',this.checked)"><span class="ts"></span></label></div>
+        <div class="trow"><span class="tl">Mouth Ulcers</span>
+          <label class="tog"><input type="checkbox" ${y.mouth?'checked':''}
+            onchange="G.uSys('mouth',this.checked)"><span class="ts"></span></label></div>`:''}
+    </div>`;
+  }
+
+  // Lifestyle section
+  function lifeSec(day,s) {
+    const l=day.life;
+    return `<div class="sc"><div class="stitle">🏃 Lifestyle</div>
+      <div class="fg"><label class="fl">Stress Level (1–5)</label>
+        <div class="sr"><input type="range" min="1" max="5" value="${l.stress||3}"
+          oninput="this.nextElementSibling.textContent=this.value;G.uLif('stress',+this.value)">
+          <div class="sv">${l.stress||3}</div></div></div>
+      <div class="r2">
+        <div class="fg"><label class="fl">Sleep Hours</label>
+          <input type="number" min="0" max="24" step="0.5" value="${l.sleepH||''}" placeholder="hrs"
+            onchange="G.uLif('sleepH',this.value!==''?+this.value:'')"></div>
+        <div class="fg"><label class="fl">Sleep Quality (1–5)</label>
+          <div class="sr"><input type="range" min="1" max="5" value="${l.sleepQ||3}"
+            oninput="this.nextElementSibling.textContent=this.value;G.uLif('sleepQ',+this.value)">
+            <div class="sv">${l.sleepQ||3}</div></div></div></div>
+      <div class="trow"><span class="tl">⚠️ GI Symptoms Woke Me From Sleep</span>
+        <label class="tog"><input type="checkbox" ${l.noct?'checked':''}
+          onchange="G.uLif('noct',this.checked);G.odc()"><span class="ts"></span></label></div>
+      <div class="fg" style="margin-top:14px"><label class="fl">Exercise</label>
+        <div class="rg">${['none','light','moderate','intense'].map(v=>`
+          <div class="ro"><input type="radio" name="exer" id="ex-${v}" value="${v}"
+            ${l.exer===v?'checked':''} onchange="G.uLif('exer',this.value);G.rr()">
+            <label for="ex-${v}">${v.charAt(0).toUpperCase()+v.slice(1)}</label></div>`).join('')}</div>
+        ${l.exer!=='none'?`<div style="margin-top:8px">
+          <input type="number" min="0" max="600" value="${l.exerMin||''}" placeholder="Minutes"
+            onchange="G.uLif('exerMin',this.value!==''?+this.value:'')"></div>`:''}</div>
+      <div class="fg"><label class="fl">Hydration (glasses of water, 0–15)</label>
+        <div class="sr"><input type="range" min="0" max="15" value="${l.hydra||0}"
+          oninput="this.nextElementSibling.textContent=this.value;G.uLif('hydra',+this.value)">
+          <div class="sv">${l.hydra||0}</div></div></div>
+      <div class="r2">
+        <div class="fg"><label class="fl">Caffeine Drinks (0–10)</label>
+          <div class="sr"><input type="range" min="0" max="10" value="${l.caff||0}"
+            oninput="this.nextElementSibling.textContent=this.value;G.uLif('caff',+this.value)">
+            <div class="sv">${l.caff||0}</div></div></div>
+        <div class="fg"><label class="fl">Alcohol Drinks (0–5)</label>
+          <div class="sr"><input type="range" min="0" max="5" value="${l.alco||0}"
+            oninput="this.nextElementSibling.textContent=this.value;G.uLif('alco',+this.value)">
+            <div class="sv">${l.alco||0}</div></div></div></div>
+      ${s.showMen?`<div class="fg"><label class="fl">Menstrual Cycle Day (1–35)</label>
+        <input type="number" min="1" max="35" value="${l.men||''}" placeholder="1–35 or leave blank"
+          onchange="G.uLif('men',this.value!==''?+this.value:'')"></div>`:''}</div>`;
+  }
+
+  // Medications section
+  function medSec(day) {
+    const cards=day.meds.map(m=>`
+      <div class="ec" id="med-${m.id}">
+        <div class="ech" onclick="G.tc('med-${m.id}')">
+          <span class="ect">${m.nm||'Medication'}</span>
+          <span class="ecm">${m.dose||''} ${m.tm||''}</span>
+          <span class="echev">▾</span>
+          <button class="edel" onclick="event.stopPropagation();G.delMed('${m.id}')">✕</button>
+        </div>
+        <div class="ecb">
+          <div class="fg"><label class="fl">Medication / Supplement Name</label>
+            <input type="text" value="${m.nm||''}" placeholder="e.g. Mesalazine, Probiotic"
+              oninput="G.uMed('${m.id}','nm',this.value)"></div>
+          <div class="r2">
+            <div class="fg"><label class="fl">Dose</label>
+              <input type="text" value="${m.dose||''}" placeholder="e.g. 400mg"
+                oninput="G.uMed('${m.id}','dose',this.value)"></div>
+            <div class="fg"><label class="fl">Time</label>
+              <input type="time" value="${m.tm||''}" onchange="G.uMed('${m.id}','tm',this.value)"></div>
+          </div></div></div>`).join('');
+    return `<div class="sc"><div class="stitle">💊 Medications &amp; Supplements</div>
+      <div id="medl">${cards}</div>
+      <button class="add-btn" onclick="G.addMed()">+ Add Medication / Supplement</button></div>`;
+  }
+
+  // Meals section
+  function mealSec(day) {
+    const cards=day.meals.map(m=>`
+      <div class="ec" id="ml-${m.id}">
+        <div class="ech" onclick="G.tc('ml-${m.id}')">
+          <span class="ect">${m.nm||'Meal'}</span>
+          <span class="ecm">${m.tm||''}</span>
+          <span class="echev">▾</span>
+          <button class="edel" onclick="event.stopPropagation();G.delMeal('${m.id}')">✕</button>
+        </div>
+        <div class="ecb">
+          <div class="fg"><label class="fl">Meal Description</label>
+            <textarea rows="2" placeholder="e.g. Oats with banana, green tea"
+              oninput="G.uMeal('${m.id}','nm',this.value)">${m.nm||''}</textarea></div>
+          <div class="fg"><label class="fl">Time</label>
+            <input type="time" value="${m.tm||''}" onchange="G.uMeal('${m.id}','tm',this.value)"></div>
+          <div class="fg"><label class="fl">Notes (optional)</label>
+            <input type="text" value="${m.notes||''}" placeholder="e.g. restaurant, high FODMAP, ate fast"
+              oninput="G.uMeal('${m.id}','notes',this.value)"></div>
+        </div></div>`).join('');
+    return `<div class="sc"><div class="stitle">🍽️ Meals</div>
+      <div id="meall">${cards}</div>
+      <button class="add-btn" onclick="G.addMeal()">+ Add Meal</button></div>`;
+  }
+
+  function noteSec(day) {
+    return `<div class="sc"><div class="stitle">📝 End of Day Note</div>
+      <div class="fg"><textarea rows="4" placeholder="Anything else you noticed today…"
+        oninput="G.uNote(this.value)">${day.note||''}</textarea></div></div>`;
+  }
+
+  // ── Daily update fns ──────────────────────────────────────
+  function uSym(f,v){const d=getDay(curD);d.sym[f]=v;putDay(curD,d);updProg(curD);updAlerts(curD);}
+  function uSys(f,v){const d=getDay(curD);d.sys[f]=v;putDay(curD,d);updProg(curD);updAlerts(curD);}
+  function uLif(f,v){const d=getDay(curD);d.life[f]=v;putDay(curD,d);updProg(curD);updAlerts(curD);}
+  function uNote(v){const d=getDay(curD);d.note=v;putDay(curD,d);updProg(curD);}
+
+  function addBM(){
+    const d=getDay(curD);
+    const b={id:uid(),tm:now(),bst:4,qty:'medium',liq:false,str:false,urg:false,inc:false,bleed:'none',peri:'none',col:'brown'};
+    d.bms.push(b); putDay(curD,d); rDaily();
+    setTimeout(()=>{const c=document.getElementById('bm-'+b.id);if(c){c.classList.add('open');c.scrollIntoView({behavior:'smooth',block:'nearest'});}},50);
+  }
+  function delBM(id){const d=getDay(curD);d.bms=d.bms.filter(b=>b.id!==id);putDay(curD,d);rDaily();updAlerts(curD);}
+  function uBM(id,f,v){const d=getDay(curD);const b=d.bms.find(x=>x.id===id);if(!b)return;b[f]=v;putDay(curD,d);updProg(curD);}
+  function rfBM(id){
+    const d=getDay(curD);const s=getSets();
+    const b=d.bms.find(x=>x.id===id);if(!b)return;
+    const card=document.getElementById('bm-'+id);if(!card)return;
+    const wasOpen=card.classList.contains('open');
+    const tmp=document.createElement('div');tmp.innerHTML=bmCard(b,0,s);
+    const nc=tmp.firstElementChild;if(wasOpen)nc.classList.add('open');
+    card.replaceWith(nc); updAlerts(curD);
+  }
+
+  function addMeal(){
+    const d=getDay(curD);
+    const m={id:uid(),nm:'',tm:now(),notes:''};
+    d.meals.push(m);putDay(curD,d);rDaily();
+    setTimeout(()=>{const c=document.getElementById('ml-'+m.id);if(c){c.classList.add('open');c.scrollIntoView({behavior:'smooth',block:'nearest'});}},50);
+  }
+  function delMeal(id){const d=getDay(curD);d.meals=d.meals.filter(m=>m.id!==id);putDay(curD,d);rDaily();}
+  function uMeal(id,f,v){const d=getDay(curD);const m=d.meals.find(x=>x.id===id);if(!m)return;m[f]=v;putDay(curD,d);}
+
+  function addMed(){
+    const d=getDay(curD);
+    const m={id:uid(),nm:'',dose:'',tm:now()};
+    d.meds.push(m);putDay(curD,d);rDaily();
+    setTimeout(()=>{const c=document.getElementById('med-'+m.id);if(c){c.classList.add('open');c.scrollIntoView({behavior:'smooth',block:'nearest'});}},50);
+  }
+  function delMed(id){const d=getDay(curD);d.meds=d.meds.filter(m=>m.id!==id);putDay(curD,d);rDaily();}
+  function uMed(id,f,v){const d=getDay(curD);const m=d.meds.find(x=>x.id===id);if(!m)return;m[f]=v;putDay(curD,d);}
+
+  function tc(id){const c=document.getElementById(id);if(c)c.classList.toggle('open');}
+  function odc(){updAlerts(curD);updProg(curD);}
+
+  // ── WEEKLY ────────────────────────────────────────────────
+  function rWeekly() {
+    const sets=getSets();
+    const ws=isoWeek(curD);
+    const wk=getWk(ws);
+    const h=sets.hasCrohns?hbi(ws):null;
+    const el=document.getElementById('tab-weekly');
+
+    const pqs={
+      ppain:[
+        'In the past 7 days, how often did you have belly pain?',
+        'How SEVERE was your belly pain at its WORST?',
+        'How much did belly pain interfere with your activities?'
+      ],
+      pbloa:[
+        'In the past 7 days, how often did you feel bloated?',
+        'How SEVERE was your bloating at its WORST?',
+        'How much did bloating interfere with your activities?'
+      ],
+      pdia:[
+        'In the past 7 days, how often did you have loose or watery stools?',
+        'How often did you feel sudden urges to have a bowel movement?',
+        'How much did urgency bother you?'
+      ]
+    };
+
+    function pdom(key,title,qs,vals){
+      const sum=vals.reduce((a,b)=>a+(b||0),0);
+      return `<div class="sc"><div class="stitle">📊 PROMIS GI — ${title}</div>
+        ${qs.map((q,i)=>`<div class="pq" style="margin-bottom:16px"><p style="font-size:13px;color:var(--dim);margin-bottom:8px">${q}</p>
+          <div class="srow">${[1,2,3,4,5].map(n=>`
+            <button class="sb${vals[i]===n?' on':''}" onclick="G.uPro('${key}',${i},${n})">${n}</button>`).join('')}</div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--dim);margin-top:4px">
+            <span>Never</span><span>Always</span></div></div>`).join('')}
+        <div style="font-size:13px;color:var(--amber);margin-top:4px">Raw: ${sum}/15${sum>0?` (T≈${Math.round(40+sum*3)})`:''}</div></div>`;
+    }
+
+    el.innerHTML=`
+      <div class="sc" style="text-align:center">
+        <div style="font-size:13px;color:var(--dim);margin-bottom:4px">Week</div>
+        <div style="font-size:22px;font-weight:700">${ws}</div>
+        <div style="font-size:12px;color:var(--dim);margin-top:4px">${fmtS(wkStart(ws))} – ${fmtS(wkEnd(ws))}</div>
+      </div>
+      <div class="sc"><div class="stitle">⚖️ Weight</div>
+        <div class="fg"><label class="fl">Current Weight (kg)</label>
+          <input type="number" min="20" max="300" step="0.1" value="${wk.weight||''}" placeholder="e.g. 72.5"
+            onchange="G.uWk('weight',this.value!==''?+this.value:'')"></div></div>
+      ${pdom('ppain','Belly Pain',pqs.ppain,wk.ppain)}
+      ${pdom('pbloa','Bloating & Gas',pqs.pbloa,wk.pbloa)}
+      ${pdom('pdia','Diarrhoea',pqs.pdia,wk.pdia)}
+      <div class="sc"><div class="stitle">😌 Bowel Satisfaction This Week</div>
+        <div class="srow">${[1,2,3,4,5].map(n=>`
+          <button class="sb${wk.bsat===n?' on':''}" onclick="G.uWk('bsat',${n})">${n}</button>`).join('')}</div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--dim);margin-top:6px">
+          <span>Very dissatisfied</span><span>Very satisfied</span></div></div>
+      ${sets.hasCrohns?hbiSec(h):''}`;
+  }
+
+  function hbiSec(h) {
+    if(!h) return `<div class="sc"><div class="stitle">🔬 Harvey-Bradshaw Index</div>
+      <div class="emp-st"><div class="ei">📋</div><p>Complete daily logs this week to calculate HBI</p></div></div>`;
+    const bc=h.band.toLowerCase();
+    return `<div class="sc"><div class="stitle">🔬 Harvey-Bradshaw Index (HBI)</div>
+      <div class="hbir">
+        <div class="hbis">${h.total}</div>
+        <div class="hbib ${bc}">${h.band} Activity</div>
+        <div class="hbid">
+          <div>Wellbeing score: ${h.wellSc}</div>
+          <div>Pain score: ${h.painSc}/3</div>
+          <div>Avg liquid stools/day: ${h.avgLiq}</div>
+          <div>Mass score: ${h.massSc}</div>
+          <div>Extraintestinal complications: ${h.compSc}</div>
+        </div>
+      </div>
+      ${h.total>=8?`<div style="margin-top:12px;padding:12px;background:var(--redbg);border:1px solid var(--red);border-radius:var(--rs)">
+        <div style="font-size:13px;font-weight:700;color:var(--red)">⚠️ Medical Alert</div>
+        <div style="font-size:12px;color:#fca5a5;margin-top:4px">HBI ${h.total} — ${h.band} Crohn's activity. Consider contacting your gastroenterologist.</div>
+      </div>`:''}
+    </div>`;
+  }
+
+  function uWk(f,v){const ws=isoWeek(curD);const wk=getWk(ws);wk[f]=v;putWk(ws,wk);rWeekly();}
+  function uPro(key,i,v){const ws=isoWeek(curD);const wk=getWk(ws);wk[key][i]=v;putWk(ws,wk);rWeekly();}
+
+  // ── HISTORY ───────────────────────────────────────────────
+  function rHistory() {
+    const now=new Date();
+    if(!calY){calY=now.getFullYear();calM=now.getMonth();}
+    const el=document.getElementById('tab-history');
+    el.innerHTML=`
+      <div class="cnav">
+        <button onclick="G.pM()">‹</button>
+        <span class="cm" id="cml"></span>
+        <button onclick="G.nM()">›</button>
+      </div>
+      <div class="cgrid" id="cgrid"></div>
+      <div style="margin-top:16px" id="charts-wrap">
+        <div class="ccon"><div class="ctit">Bristol Scale (7-day avg)</div><canvas id="chbst" height="180"></canvas></div>
+        <div class="ccon"><div class="ctit">Abdominal Pain Trend</div><canvas id="chpain" height="180"></canvas></div>
+        <div class="ccon"><div class="ctit">Bloating Trend</div><canvas id="chbloa" height="180"></canvas></div>
+        <div class="ccon"><div class="ctit">Stool Frequency / Day</div><canvas id="chfreq" height="180"></canvas></div>
+        <div class="ccon" id="chliqc"><div class="ctit">Liquid Stools / Day</div><canvas id="chliq" height="180"></canvas></div>
+        <div class="ccon"><div class="ctit">Stress vs Pain (last 30 days)</div><canvas id="chsct" height="180"></canvas></div>
+        <div class="ccon" id="chhbic"><div class="ctit">HBI Weekly Score</div><canvas id="chhbi" height="180"></canvas></div>
+        <div class="ccon"><div class="ctit">Weight Trend</div><canvas id="chwt" height="180"></canvas></div>
+      </div>`;
+    rCal(calY,calM);
+    initCharts();
+  }
+
+  function rCal(yr,mo) {
+    const data=load();
+    const lbl=new Date(yr,mo,1).toLocaleDateString('en-GB',{month:'long',year:'numeric'});
+    const lel=document.getElementById('cml');if(lel)lel.textContent=lbl;
+    const grid=document.getElementById('cgrid');if(!grid)return;
+    const days=['Mo','Tu','We','Th','Fr','Sa','Su'];
+    let h=days.map(d=>`<div class="cdh">${d}</div>`).join('');
+    const first=new Date(yr,mo,1);
+    const last=new Date(yr,mo+1,0);
+    const startDow=(first.getDay()+6)%7;
+    for(let i=0;i<startDow;i++)h+='<div class="cd emp"></div>';
+    const td=tday();
+    for(let d=1;d<=last.getDate();d++){
+      const ds=`${yr}-${p2(mo+1)}-${p2(d)}`;
+      const dd=data.days[ds];
+      const pain=dd?.sym?.pain||0;
+      const cls=['cd',dd?`p${pain}`:'nd',ds===td?'tod':'',dd?'':''].filter(Boolean).join(' ');
+      h+=`<div class="${cls}" onclick="G.showDay('${ds}')">${d}</div>`;
+    }
+    grid.innerHTML=h;
+  }
+
+  function pM(){calM--;if(calM<0){calM=11;calY--;}rCal(calY,calM);}
+  function nM(){calM++;if(calM>11){calM=0;calY++;}rCal(calY,calM);}
+
+  function showDay(ds) {
+    const day=getDay(ds);
+    const sets=getSets();
+    const bms=day.bms||[];
+    const liq=bms.filter(b=>b.liq).length;
+    const avgB=bms.length>0?Math.round(bms.reduce((s,b)=>s+(b.bst||4),0)/bms.length*10)/10:'—';
+    const fl=flags(ds);
+    const items=[
+      ['Date',fmtL(ds)],['BMs',bms.length||'—'],['Avg Bristol',avgB],
+      ['Liquid Stools',liq],['Pain (NRS)',day.sym?.pain??'—'],
+      ['Pain Location',day.sym?.ploc||'—'],['Bloating',day.sym?.bloat??'—'],
+      ['Nausea',day.sym?.nausea??'—'],['Gas',day.sym?.gas??'—'],
+      ['Wellbeing',day.sys?.well??'—'],['Fatigue',day.sys?.fatigue??'—'],
+      ['Fever',day.sys?.fever?'Yes':'No'],['Stress',day.life?.stress??'—'],
+      ['Sleep',day.life?.sleepH!==''?`${day.life.sleepH}h`:'—'],
+      ['Exercise',day.life?.exer||'—'],
+      ['Hydration',`${day.life?.hydra??'—'} glasses`],
+    ];
+    if(day.meals?.length)items.push(['Meals',day.meals.map(m=>m.nm||'(unnamed)').join(', ')]);
+    if(day.meds?.length)items.push(['Meds',day.meds.map(m=>`${m.nm} ${m.dose}`).join(', ')]);
+    if(day.note?.trim())items.push(['Notes',day.note]);
+    document.getElementById('day-body').innerHTML=`
+      <div class="mt">${fmtS(ds)}</div>
+      ${fl.length?`<div style="background:var(--redbg);border:1px solid var(--red);border-radius:var(--rs);padding:10px 14px;margin-bottom:16px">
+        <div style="font-size:13px;font-weight:700;color:var(--red);margin-bottom:6px">⚠️ Alerts</div>
+        ${fl.map(f=>`<div style="font-size:12px;color:#fca5a5">• ${f}</div>`).join('')}</div>`:''}
+      ${items.map(([k,v])=>`<div class="dsi"><span class="dsk">${k}</span><span>${v}</span></div>`).join('')}`;
+    document.getElementById('mo-day').classList.add('on');
+  }
+
+  // Chart helpers
+  const cDef={
+    responsive:true,maintainAspectRatio:true,
+    plugins:{legend:{display:false},tooltip:{backgroundColor:'#1e3a5f',titleColor:'#f59e0b',bodyColor:'#f8fafc',borderColor:'#2a4a73',borderWidth:1}},
+    scales:{
+      x:{grid:{color:'#1e3a5f'},ticks:{color:'#94a3b8',font:{size:10},maxRotation:45}},
+      y:{grid:{color:'#1e3a5f'},ticks:{color:'#94a3b8',font:{size:11}}}
+    }
+  };
+
+  function mk(id,type,data,opts){
+    if(!document.getElementById(id))return null;
+    try{return new Chart(document.getElementById(id),{type,data,options:opts});}catch{return null;}
+  }
+
+  function getLast30(){const r=[];for(let i=29;i>=0;i--)r.push(addD(tday(),-i));return r;}
+
+  function roll(arr,w){
+    return arr.map((_,i)=>{
+      const sl=arr.slice(Math.max(0,i-w+1),i+1).filter(v=>v!==null&&v!==undefined);
+      return sl.length?Math.round(sl.reduce((a,b)=>a+b,0)/sl.length*10)/10:null;
+    });
+  }
+
+  function initCharts(){
+    if(typeof Chart==='undefined')return;
+    Object.values(CH).forEach(c=>c&&c.destroy());CH={};
+    const data=load();const sets=getSets();
+    const l30=getLast30();
+    const d30=l30.map(d=>{const dd=data.days[d];return dd?merge(defDay(),dd):null;});
+    const lbl=l30.map(d=>{const dt=new Date(d+'T12:00:00');return p2(dt.getDate())+'/'+p2(dt.getMonth()+1);});
+
+    const bstData=roll(d30.map(d=>{
+      if(!d||!d.bms.length)return null;
+      return d.bms.reduce((s,b)=>s+(b.bst||4),0)/d.bms.length;
+    }),7);
+
+    CH.bst=mk('chbst','line',{labels:lbl,datasets:[{data:bstData,borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,.1)',fill:true,tension:.4,pointRadius:2,spanGaps:true}]},
+      {...cDef,scales:{...cDef.scales,y:{...cDef.scales.y,min:1,max:7}}});
+
+    CH.pain=mk('chpain','line',{labels:lbl,datasets:[{data:d30.map(d=>d?.sym?.pain??null),borderColor:'#ef4444',backgroundColor:'rgba(239,68,68,.1)',fill:true,tension:.4,pointRadius:2,spanGaps:true}]},
+      {...cDef,scales:{...cDef.scales,y:{...cDef.scales.y,min:0,max:10}}});
+
+    CH.bloa=mk('chbloa','line',{labels:lbl,datasets:[{data:d30.map(d=>d?.sym?.bloat??null),borderColor:'#8b5cf6',backgroundColor:'rgba(139,92,246,.1)',fill:true,tension:.4,pointRadius:2,spanGaps:true}]},
+      {...cDef,scales:{...cDef.scales,y:{...cDef.scales.y,min:0,max:4}}});
+
+    CH.freq=mk('chfreq','bar',{labels:lbl,datasets:[{data:d30.map(d=>d?d.bms.length:0),backgroundColor:'rgba(245,158,11,.7)',borderColor:'#f59e0b',borderWidth:1,borderRadius:3}]},cDef);
+
+    if(sets.hasCrohns){
+      CH.liq=mk('chliq','bar',{labels:lbl,datasets:[{data:d30.map(d=>d?d.bms.filter(b=>b.liq).length:0),backgroundColor:'rgba(239,68,68,.7)',borderColor:'#ef4444',borderWidth:1,borderRadius:3}]},cDef);
+    }else{const c=document.getElementById('chliqc');if(c)c.style.display='none';}
+
+    const sct=d30.filter(d=>d&&d.life.stress>0).map(d=>({x:d.life.stress,y:d.sym.pain}));
+    CH.sct=mk('chsct','scatter',{datasets:[{data:sct,backgroundColor:'rgba(245,158,11,.6)',pointRadius:6}]},
+      {...cDef,scales:{x:{...cDef.scales.x,title:{display:true,text:'Stress (1-5)',color:'#94a3b8'},min:0,max:6},y:{...cDef.scales.y,title:{display:true,text:'Pain (0-10)',color:'#94a3b8'},min:0,max:10}}});
+
+    if(sets.hasCrohns){
+      const wks=new Set(Object.keys(data.days).map(d=>isoWeek(d)));
+      const hbis=Array.from(wks).sort().map(ws=>{const h=hbi(ws);return{wk:'W'+ws.split('-W')[1],v:h?.total??null};});
+      CH.hbi=mk('chhbi','line',{labels:hbis.map(x=>x.wk),datasets:[{data:hbis.map(x=>x.v),borderColor:'#f97316',backgroundColor:'rgba(249,115,22,.1)',fill:true,tension:.4,pointRadius:3,spanGaps:true}]},
+        {...cDef,scales:{...cDef.scales,y:{...cDef.scales.y,min:0}}});
+    }else{const c=document.getElementById('chhbic');if(c)c.style.display='none';}
+
+    const wts=Object.entries(data.weeks).filter(([,w])=>w.weight).sort(([a],[b])=>a.localeCompare(b))
+      .map(([ws,w])=>({wk:'W'+ws.split('-W')[1],v:w.weight}));
+    if(wts.length){
+      CH.wt=mk('chwt','line',{labels:wts.map(x=>x.wk),datasets:[{data:wts.map(x=>x.v),borderColor:'#22c55e',backgroundColor:'rgba(34,197,94,.1)',fill:true,tension:.4,pointRadius:3,spanGaps:true}]},
+        {...cDef,scales:{...cDef.scales,y:{...cDef.scales.y,ticks:{...cDef.scales.y.ticks,callback:v=>v+'kg'}}}});
+    }
+  }
+
+  // ── EXPORT ────────────────────────────────────────────────
+  const exRng={json:'month',csv:'month',pdf:'month'};
+
+  function rExport() {
+    const el=document.getElementById('tab-export');
+    el.innerHTML=`
+      <div style="margin-bottom:16px">
+        <div style="font-size:20px;font-weight:700;margin-bottom:4px">Export Data</div>
+        <div style="font-size:13px;color:var(--dim)">All data stays on your device.</div>
+      </div>
+      ${exSec('json','🤖 Export JSON (for AI / Claude)','Full structured data with all computed fields, ISO timestamps, nested structure.')}
+      ${exSec('csv','📊 Export CSV (spreadsheet)','Two files: daily summary + individual BM events.')}
+      ${exSec('pdf','📄 Export PDF (for doctor)','Formatted medical report with alarm events, summaries, and notes.')}`;
+  }
+
+  function exSec(type,title,desc){
+    return `<div class="exs"><h3>${title}</h3><p>${desc}</p>
+      <div class="rsel" id="rs-${type}">
+        <button class="rb on" onclick="G.sRng('${type}','month')">This Month</button>
+        <button class="rb" onclick="G.sRng('${type}','last')">Last Month</button>
+        <button class="rb" onclick="G.sRng('${type}','all')">All Time</button>
+        <button class="rb" onclick="G.sRng('${type}','custom')">Custom</button>
+      </div>
+      <div class="crange" id="cr-${type}">
+        <input type="date" id="fr-${type}">
+        <span style="color:var(--dim)">→</span>
+        <input type="date" id="to-${type}">
+      </div>
+      <button class="btn" onclick="G.doEx('${type}')">⬇️ Download ${type.toUpperCase()}</button></div>`;
+  }
+
+  function sRng(type,rng){
+    exRng[type]=rng;
+    const rs=document.getElementById('rs-'+type);
+    rs.querySelectorAll('.rb').forEach(b=>b.classList.remove('on'));
+    const idx={month:0,last:1,all:2,custom:3}[rng];
+    rs.querySelectorAll('.rb')[idx]?.classList.add('on');
+    document.getElementById('cr-'+type).classList.toggle('on',rng==='custom');
+  }
+
+  function getRange(type){
+    const rng=exRng[type]||'month';
+    const td=new Date();
+    if(rng==='month'){
+      return{from:`${td.getFullYear()}-${p2(td.getMonth()+1)}-01`,to:tday()};
+    }else if(rng==='last'){
+      const f=new Date(td.getFullYear(),td.getMonth()-1,1);
+      const t=new Date(td.getFullYear(),td.getMonth(),0);
+      return{from:f.toISOString().split('T')[0],to:t.toISOString().split('T')[0]};
+    }else if(rng==='all'){
+      const keys=Object.keys(load().days).sort();
+      if(!keys.length)return{from:tday(),to:tday()};
+      return{from:keys[0],to:keys[keys.length-1]};
+    }else{
+      return{from:document.getElementById('fr-'+type)?.value||tday(),
+             to:document.getElementById('to-'+type)?.value||tday()};
+    }
+  }
+
+  function doEx(type){
+    const{from,to}=getRange(type);
+    if(type==='json')exJSON(from,to);
+    else if(type==='csv')exCSV(from,to);
+    else exPDF(from,to);
+  }
+
+  function exJSON(from,to){
+    const data=load();const sets=getSets();
+    const dates=range(from,to);
+    const out={exportedAt:new Date().toISOString(),version:1,dateRange:{from,to},
+      settings:{userName:sets.userName,hasCrohns:sets.hasCrohns},days:{},weeks:{}};
+    for(const d of dates){
+      const dd=data.days[d];if(!dd)continue;
+      const m=merge(defDay(),dd);
+      const ws=isoWeek(d);const h=sets.hasCrohns?hbi(ws):null;
+      out.days[d]={date:d,timestamp:d+'T00:00:00.000Z',
+        bowelMovements:m.bms.map(b=>({...b,bristolLabel:BST[b.bst]?.l||'',bristolHint:BST[b.bst]?.h||''})),
+        bmCount:m.bms.length,liquidBMCount:m.bms.filter(b=>b.liq).length,
+        avgBristol:m.bms.length?Math.round(m.bms.reduce((s,b)=>s+(b.bst||4),0)/m.bms.length*10)/10:null,
+        symptoms:m.sym,systemic:m.sys,lifestyle:m.life,
+        medications:m.meds,meals:m.meals,endOfDayNote:m.note,
+        weekKey:ws,hbi:h?{score:h.total,band:h.band}:null,redFlags:flags(d)};
+    }
+    const wks=new Set(dates.map(d=>isoWeek(d)));
+    for(const ws of wks){
+      const wk=data.weeks[ws];if(!wk)continue;
+      const h=sets.hasCrohns?hbi(ws):null;
+      out.weeks[ws]={...wk,hbi:h?{score:h.total,band:h.band,...h}:null};
+    }
+    dl(JSON.stringify(out,null,2),`guttracker_${from}_${to}.json`,'application/json');
+  }
+
+  function exCSV(from,to){
+    const data=load();const dates=range(from,to);
+    const dcols='date,bm_count,liquid_bm_count,avg_bristol,avg_pain,pain_location,bloating,gas,nausea,heartburn,abd_mass,wellbeing,fatigue,fever,temperature,joint_pain,skin,eye_inflammation,mouth_ulcers,stress,sleep_hours,sleep_quality,nocturnal_symptoms,exercise,exercise_minutes,hydration,caffeine,alcohol,menstrual_day,weight,hbi_score,hbi_band,end_of_day_note';
+    const drows=[dcols];
+    const bmcols='date,bm_number,time,bristol,bristol_label,quantity,liquid,straining,urgency,incomplete_evacuation,rectal_bleeding,perianal,colour';
+    const bmrows=[bmcols];
+    for(const d of dates){
+      const dd=data.days[d];if(!dd)continue;
+      const m=merge(defDay(),dd);
+      const ws=isoWeek(d);const h=hbi(ws);const wk=data.weeks[ws]||{};
+      const bms=m.bms;
+      const ab=bms.length?Math.round(bms.reduce((s,b)=>s+(b.bst||4),0)/bms.length*10)/10:'';
+      drows.push([d,bms.length,bms.filter(b=>b.liq).length,ab,
+        m.sym.pain,m.sym.ploc,m.sym.bloat,m.sym.gas,m.sym.nausea,m.sym.hburn,m.sym.mass?1:0,
+        m.sys.well,m.sys.fatigue,m.sys.fever?1:0,m.sys.temp||'',m.sys.jPain?1:0,
+        m.sys.skin,m.sys.eye?1:0,m.sys.mouth?1:0,
+        m.life.stress,m.life.sleepH||'',m.life.sleepQ||'',m.life.noct?1:0,
+        m.life.exer,m.life.exerMin||'',m.life.hydra,m.life.caff,m.life.alco,m.life.men||'',
+        wk.weight||'',h?.total||'',h?.band||'',csv(m.note)].join(','));
+      bms.forEach((b,i)=>{
+        bmrows.push([d,i+1,b.tm||'',b.bst||'',csv(BST[b.bst]?.l||''),
+          b.qty||'',b.liq?1:0,b.str?1:0,b.urg?1:0,b.inc?1:0,
+          b.bleed||'none',b.peri||'none',b.col||'brown'].join(','));
+      });
+    }
+    dl(drows.join('\n'),`guttracker_daily_${from}_${to}.csv`,'text/csv');
+    setTimeout(()=>dl(bmrows.join('\n'),`guttracker_bm_${from}_${to}.csv`,'text/csv'),500);
+  }
+
+  function csv(v){if(typeof v!=='string')return v??'';if(v.includes(',')||v.includes('"')||v.includes('\n'))return'"'+v.replace(/"/g,'""')+'"';return v;}
+
+  function exPDF(from,to){
+    const jsPDF=(window.jspdf||window).jsPDF;
+    if(!jsPDF){alert('PDF library not loaded. Check internet connection.');return;}
+    const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    const data=load();const sets=getSets();
+    const dates=range(from,to);
+    const logged=dates.filter(d=>!!data.days[d]);
+    const W=210,M=20;let y=M;
+    const ap=()=>{doc.addPage();y=M;};
+    const cy=(n=15)=>{if(y+n>275)ap();};
+    const txt=(s,x,sz=10,col=[50,60,80],st='normal')=>{doc.setFontSize(sz);doc.setTextColor(...col);doc.setFont('helvetica',st);doc.text(s,x,y);};
+    const h1=(s,sz=14)=>{cy(14);doc.setFontSize(sz);doc.setTextColor(245,158,11);doc.setFont('helvetica','bold');doc.text(s,M,y);y+=sz*0.55;};
+    const row=(k,v)=>{cy(7);doc.setFontSize(10);doc.setTextColor(120,130,150);doc.setFont('helvetica','normal');doc.text(k+':',M,y);doc.setTextColor(20,30,60);doc.setFont('helvetica','bold');doc.text(String(v),M+72,y);y+=6;};
+    const ln=()=>{doc.setDrawColor(200,210,230);doc.line(M,y,W-M,y);y+=4;};
+
+    // Cover
+    doc.setFillColor(13,27,42);doc.rect(0,0,W,45,'F');
+    doc.setFontSize(24);doc.setTextColor(245,158,11);doc.setFont('helvetica','bold');doc.text('GutTracker',M,18);
+    doc.setFontSize(12);doc.setTextColor(180,210,240);doc.setFont('helvetica','normal');doc.text('Gut Health Report',M,26);
+    doc.setFontSize(9);doc.text(`Generated: ${new Date().toLocaleDateString('en-GB')}`,M,33);
+    if(sets.userName)doc.text(`Patient: ${sets.userName}`,M,39);
+    y=55;
+
+    h1('a. Summary',13);y+=2;
+    row('Date Range',`${from} → ${to}`);
+    row('Total Days in Period',dates.length);
+    row('Days Logged',logged.length);
+    row('% Days Logged',Math.round(logged.length/dates.length*100)+'%');
+    y+=4;ln();
+
+    h1('b. Stool Profile',12);y+=2;
+    const allBMs=logged.flatMap(d=>merge(defDay(),data.days[d]).bms);
+    const ab=allBMs.length?Math.round(allBMs.reduce((s,b)=>s+(b.bst||4),0)/allBMs.length*10)/10:0;
+    const af=logged.length?Math.round(allBMs.length/logged.length*10)/10:0;
+    const liqBMs=allBMs.filter(b=>b.liq);
+    row('Average Bristol Scale',ab);row('Avg BM Frequency/Day',af);
+    row('Avg Liquid Stools/Day',logged.length?Math.round(liqBMs.length/logged.length*10)/10:0);
+    row('Total BMs Logged',allBMs.length);
+    cy(8);const bd={};allBMs.forEach(b=>{bd[b.bst]=(bd[b.bst]||0)+1;});
+    doc.setFontSize(9);doc.setTextColor(100,110,130);doc.setFont('helvetica','normal');
+    doc.text('Distribution: '+[1,2,3,4,5,6,7].map(n=>`T${n}:${bd[n]||0}`).join(' '),M,y);y+=8;ln();
+
+    h1('c. Symptom Averages',12);y+=2;
+    const sav=(f)=>{const v=logged.map(d=>merge(defDay(),data.days[d]).sym[f]||0);return v.length?Math.round(v.reduce((a,b)=>a+b,0)/v.length*10)/10:0;};
+    row('Pain (NRS 0-10)',sav('pain'));row('Bloating (0-4)',sav('bloat'));
+    row('Nausea (0-4)',sav('nausea'));row('Gas (0-4)',sav('gas'));row('Heartburn (0-4)',sav('hburn'));
+    y+=4;ln();
+
+    if(sets.hasCrohns){
+      h1('d. IBD Activity (HBI)',12);y+=2;
+      const wks=new Set(logged.map(d=>isoWeek(d)));
+      const hbis=[...wks].map(ws=>hbi(ws)).filter(Boolean);
+      if(hbis.length){row('Latest HBI Score',hbis[hbis.length-1].total);row('Activity Band',hbis[hbis.length-1].band);row('Average HBI',Math.round(hbis.reduce((s,h)=>s+h.total,0)/hbis.length));}
+      else{doc.setFontSize(10);doc.setTextColor(120,130,150);doc.text('No HBI data for this period.',M,y);y+=8;}
+      y+=4;ln();
+    }
+
+    h1('e. Weight Trend',12);y+=2;
+    const wts=logged.map(d=>({d,w:(data.weeks[isoWeek(d)]||{}).weight})).filter(e=>e.w);
+    if(wts.length){const wv=wts.map(e=>e.w);row('Latest Weight',wts[wts.length-1].w+' kg');row('Min',Math.min(...wv)+' kg');row('Max',Math.max(...wv)+' kg');}
+    else{doc.setFontSize(10);doc.setTextColor(120,130,150);doc.text('No weight data logged.',M,y);y+=8;}
+    y+=4;ln();
+
+    h1('f. Lifestyle Averages',12);y+=2;
+    const lav=(f)=>{const v=logged.map(d=>merge(defDay(),data.days[d]).life[f]).filter(x=>x!==''&&x!==null&&x!==undefined);return v.length?Math.round(v.reduce((a,b)=>a+b,0)/v.length*10)/10:'N/A';};
+    row('Stress (1-5)',lav('stress'));row('Sleep Hours',lav('sleepH'));
+    row('Sleep Quality (1-5)',lav('sleepQ'));row('Hydration (glasses)',lav('hydra'));
+    y+=4;ln();
+
+    h1('g. Medications',12);y+=2;
+    const mmap=new Map();logged.forEach(d=>merge(defDay(),data.days[d]).meds.forEach(m=>{if(m.nm)mmap.set(m.nm.toLowerCase(),{nm:m.nm,dose:m.dose});}));
+    if(mmap.size){[...mmap.values()].forEach(m=>{cy(7);doc.setFontSize(10);doc.setTextColor(20,30,60);doc.setFont('helvetica','normal');doc.text(`• ${m.nm}${m.dose?' — '+m.dose:''}`,M+4,y);y+=6;});}
+    else{doc.setFontSize(10);doc.setTextColor(120,130,150);doc.text('No medications logged.',M,y);y+=8;}
+    y+=4;ln();
+
+    h1('h. Alarm Events',12);y+=2;
+    let alc=0;
+    for(const d of logged){const fl=flags(d);if(fl.length){cy(12);doc.setFontSize(10);doc.setTextColor(180,40,40);doc.setFont('helvetica','bold');doc.text(fmtS(d)+':',M,y);y+=5;fl.forEach(f=>{cy(6);doc.setFontSize(9);doc.setTextColor(130,40,40);doc.setFont('helvetica','normal');doc.text('  ⚠ '+f,M,y);y+=5;});alc++;}}
+    if(!alc){doc.setFontSize(10);doc.setTextColor(40,140,80);doc.setFont('helvetica','normal');doc.text('✓ No alarm events in this period.',M,y);y+=8;}
+    y+=4;ln();
+
+    h1('i. End of Day Notes',12);y+=2;
+    let nc=0;
+    for(const d of logged){const note=merge(defDay(),data.days[d]).note;if(note?.trim()){cy(12);doc.setFontSize(10);doc.setTextColor(180,120,10);doc.setFont('helvetica','bold');doc.text(fmtS(d)+':',M,y);y+=5;const lns=doc.splitTextToSize(note,W-M*2-10);lns.forEach(l=>{cy(5);doc.setFontSize(9);doc.setTextColor(50,60,80);doc.setFont('helvetica','normal');doc.text('  '+l,M,y);y+=5;});nc++;}}
+    if(!nc){doc.setFontSize(10);doc.setTextColor(120,130,150);doc.text('No notes in this period.',M,y);}
+
+    const pg=doc.getNumberOfPages();
+    for(let i=1;i<=pg;i++){doc.setPage(i);doc.setFontSize(8);doc.setTextColor(150,160,180);doc.text(`GutTracker Report — Page ${i} of ${pg}`,M,290);doc.text('CONFIDENTIAL — For medical use only',W-M,290,{align:'right'});}
+
+    doc.save(`guttracker_report_${from}_${to}.pdf`);
+  }
+
+  function dl(content,fname,mime){
+    const blob=new Blob([content],{type:mime});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download=fname;
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  // ── SETTINGS ──────────────────────────────────────────────
+  function openSet(){
+    const s=getSets();
+    document.getElementById('set-body').innerHTML=`
+      <div class="sg"><div class="sgt">Profile</div>
+        <div class="fg"><label class="fl">Your Name</label>
+          <input type="text" id="sn" value="${s.userName||''}" placeholder="Your name"></div>
+        <div class="fg"><label class="fl">Date of Birth</label>
+          <input type="date" id="sdob" value="${s.dob||''}"></div></div>
+      <div class="sg"><div class="sgt">Tracking Preferences</div>
+        <div class="trow">
+          <div><div class="tl">IBD / Crohn's Diagnosis</div>
+            <div style="font-size:12px;color:var(--dim)">Shows HBI, liquid stool, perianal fields</div></div>
+          <label class="tog"><input type="checkbox" id="sc" ${s.hasCrohns?'checked':''}><span class="ts"></span></label></div>
+        <div class="trow">
+          <div><div class="tl">Menstrual Cycle Tracking</div>
+            <div style="font-size:12px;color:var(--dim)">Shows cycle day in lifestyle section</div></div>
+          <label class="tog"><input type="checkbox" id="sm" ${s.showMen?'checked':''}><span class="ts"></span></label></div></div>
+      <div class="sg"><div class="sgt">Weekly Check-In Day</div>
+        <div class="rg">${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((d,i)=>`
+          <div class="ro"><input type="radio" name="wd" id="wd${i}" value="${i+1}" ${s.weekDay===(i+1)?'checked':''}>
+          <label for="wd${i}">${d}</label></div>`).join('')}</div></div>
+      <div class="sg"><div class="sgt">Notifications</div>
+        <div class="trow"><span class="tl">Daily Reminders</span>
+          <label class="tog"><input type="checkbox" id="snotif" ${s.notif?'checked':''}
+            onchange="G.reqNotif(this.checked)"><span class="ts"></span></label></div></div>`;
+    document.getElementById('mo-set').classList.add('on');
+  }
+
+  function saveSet(){
+    const s={
+      userName:document.getElementById('sn')?.value||'',
+      dob:document.getElementById('sdob')?.value||'',
+      hasCrohns:document.getElementById('sc')?.checked||false,
+      showMen:document.getElementById('sm')?.checked||false,
+      weekDay:parseInt(document.querySelector('input[name="wd"]:checked')?.value||'1'),
+      notif:document.getElementById('snotif')?.checked||false
+    };
+    putSets(s);
+    closeMo('set');
+    const hs=document.getElementById('hsubt');
+    if(hs)hs.textContent=s.userName?`Hello, ${s.userName}`:'Gut Health Journal';
+    if(tab==='daily')rDaily();
+  }
+
+  function clearAll(){
+    if(confirm('⚠️ Delete ALL gut health data? This cannot be undone.')){
+      if(confirm('Final confirmation — delete everything?')){
+        localStorage.removeItem(KEY);
+        closeMo('set');
+        location.reload();
+      }
+    }
+  }
+
+  function reqNotif(on){
+    if(!on)return;
+    if('Notification' in window){
+      Notification.requestPermission().then(p=>{
+        if(p!=='granted'){const el=document.getElementById('snotif');if(el)el.checked=false;}
+      });
+    }
+  }
+
+  function closeMo(id){document.getElementById('mo-'+id).classList.remove('on');}
+
+  // ── INIT ──────────────────────────────────────────────────
+  function init(){
+    const now=new Date();calY=now.getFullYear();calM=now.getMonth();
+    const s=getSets();
+    const hs=document.getElementById('hsubt');
+    if(hs&&s.userName)hs.textContent=`Hello, ${s.userName}`;
+    sw('daily');
+    if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+  }
+
+  // Keyboard close modals
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape'){
+      ['set','day'].forEach(id=>{
+        const el=document.getElementById('mo-'+id);
+        if(el&&el.classList.contains('on'))el.classList.remove('on');
+      });
+    }
+  });
+
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init);
+  else init();
+
+  return {
+    sw,pd,nd,gt,rr,
+    addBM,delBM,uBM,rfBM,
+    addMeal,delMeal,uMeal,
+    addMed,delMed,uMed,
+    uSym,uSys,uLif,uNote,
+    tc,odc,rDaily,
+    uWk,uPro,
+    pM,nM,showDay,
+    sRng,doEx,
+    openSet,saveSet,clearAll,closeMo,reqNotif
+  };
+})();
+</script>
+</body>
+</html>
