@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CACHE_VERSION: 1 -->
+<!-- CACHE_VERSION: 2 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -206,6 +206,21 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;background:var(--ambe
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
 @media(min-width:540px){#tbar{left:auto;transform:none}}
+/* FOOD ITEMS */
+.fi{background:var(--navy);border:1px solid var(--border);border-radius:var(--rs);padding:10px 10px 8px;margin-bottom:8px}
+.fi-top{display:flex;gap:8px;align-items:flex-start}
+.fi-fields{flex:1;display:flex;flex-direction:column;gap:7px;min-width:0}
+.fi-qty{display:flex;gap:6px;align-items:center}
+.fi-qty input[type=number]{width:72px;flex-shrink:0;min-width:0;padding:8px 10px;font-size:14px}
+.fi-qty select{flex:1;font-size:14px;padding:8px 30px 8px 10px}
+.fi-fields>input[type=text]{font-size:14px;padding:8px 10px}
+.fi-flags{display:flex;gap:14px;flex-wrap:wrap;margin-top:2px}
+.fi-flag{display:flex;align-items:center;gap:6px;font-size:13px}
+.fi-fopts{display:flex;gap:4px}
+.fi-fopt{padding:4px 9px;background:var(--n2);border:1.5px solid var(--border);border-radius:20px;color:var(--dim);font-family:inherit;font-size:12px;font-weight:500;cursor:pointer;transition:all .2s}
+.fi-fopt.fy{background:#166534;border-color:var(--green);color:var(--green)}
+.fi-fopt.fn{border-color:var(--n3);color:var(--dim)}
+.fi-notes input{font-size:13px;padding:7px 10px}
 </style>
 </head>
 <body>
@@ -565,6 +580,13 @@ const G = (() => {
               <option value="other"${b.peri==='other'?' selected':''}>Other</option>
             </select></div>`:''}
         </div>
+        <div class="fg"><label class="fl">Mucus in Stool</label>
+          <select onchange="G.uBM('${b.id}','mucus',this.value)">
+            <option value="none"${(!b.mucus||b.mucus==='none')?' selected':''}>None</option>
+            <option value="small"${b.mucus==='small'?' selected':''}>Small amount</option>
+            <option value="moderate"${b.mucus==='moderate'?' selected':''}>Moderate</option>
+            <option value="large"${b.mucus==='large'?' selected':''}>Large amount</option>
+          </select></div>
       </div></div>`;
   }
 
@@ -710,27 +732,69 @@ const G = (() => {
 
   // Meals section
   function mealSec(day) {
-    const cards=day.meals.map(m=>`
-      <div class="ec" id="ml-${m.id}">
-        <div class="ech" onclick="G.tc('ml-${m.id}')">
-          <span class="ect">${m.nm||'Meal'}</span>
-          <span class="ecm">${m.tm||''}</span>
-          <span class="echev">▾</span>
-          <button class="edel" onclick="event.stopPropagation();G.delMeal('${m.id}')">✕</button>
-        </div>
-        <div class="ecb">
-          <div class="fg"><label class="fl">Meal Description</label>
-            <textarea rows="2" placeholder="e.g. Oats with banana, green tea"
-              oninput="G.uMeal('${m.id}','nm',this.value)">${m.nm||''}</textarea></div>
-          <div class="fg"><label class="fl">Time</label>
-            <input type="time" value="${m.tm||''}" onchange="G.uMeal('${m.id}','tm',this.value)"></div>
-          <div class="fg"><label class="fl">Notes (optional)</label>
-            <input type="text" value="${m.notes||''}" placeholder="e.g. restaurant, high FODMAP, ate fast"
-              oninput="G.uMeal('${m.id}','notes',this.value)"></div>
-        </div></div>`).join('');
+    const cards=day.meals.map(m=>mealCard(m)).join('');
     return `<div class="sc"><div class="stitle">🍽️ Meals</div>
       <div id="meall">${cards}</div>
       <button class="add-btn" onclick="G.addMeal()">+ Add Meal</button></div>`;
+  }
+
+  function mealCard(m) {
+    const its=m.items||[];
+    const hasG=its.some(i=>i.gluten==='yes');
+    const hasL=its.some(i=>i.lactose==='yes');
+    const summ=its.length?`${its.length} item${its.length>1?'s':''}${hasG?' 🌾':''}${hasL?' 🥛':''}`:'No items';
+    return `<div class="ec" id="ml-${m.id}">
+      <div class="ech" onclick="G.tc('ml-${m.id}')">
+        <span class="ect">${m.nm||'Meal'}</span>
+        <span class="ecm">${m.tm?m.tm+' · ':''}${summ}</span>
+        <span class="echev">▾</span>
+        <button class="edel" onclick="event.stopPropagation();G.delMeal('${m.id}')">✕</button>
+      </div>
+      <div class="ecb">
+        <div class="r2">
+          <div class="fg"><label class="fl">Meal Name</label>
+            <input type="text" value="${m.nm||''}" placeholder="e.g. Breakfast, Lunch"
+              oninput="G.uMeal('${m.id}','nm',this.value)"></div>
+          <div class="fg"><label class="fl">Time</label>
+            <input type="time" value="${m.tm||''}" onchange="G.uMeal('${m.id}','tm',this.value)"></div>
+        </div>
+        <div style="font-size:11px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.7px;margin:2px 0 8px">Food Items</div>
+        <div id="fi-${m.id}">${its.map(it=>foodItemHTML(m.id,it)).join('')}</div>
+        <button class="add-btn" style="margin-top:0" onclick="G.addFI('${m.id}')">+ Add Food Item</button>
+      </div></div>`;
+  }
+
+  function foodItemHTML(mealId,it) {
+    const gv=it.gluten||'?';const lv=it.lactose||'?';
+    return `<div class="fi" id="fi-${it.id}">
+      <div class="fi-top">
+        <div class="fi-fields">
+          <input type="text" value="${it.food||''}" placeholder="Food name, e.g. Greek yogurt"
+            oninput="G.uFI('${mealId}','${it.id}','food',this.value)">
+          <div class="fi-qty">
+            <input type="number" min="0" step="any" value="${it.qty||''}" placeholder="Qty"
+              oninput="G.uFI('${mealId}','${it.id}','qty',this.value!==''?+this.value:'')">
+            <select onchange="G.uFI('${mealId}','${it.id}','unit',this.value)">
+              ${['g','ml','pieces','tbsp','cup'].map(u=>`<option value="${u}"${it.unit===u?' selected':''}>${u}</option>`).join('')}
+            </select>
+          </div>
+          <div class="fi-flags">
+            <div class="fi-flag"><span>🌾</span>
+              <div class="fi-fopts">
+                ${['yes','no','?'].map(v=>`<button class="fi-fopt${gv===v?(v==='yes'?' fy':' fn'):''}"
+                  onclick="G.uFI('${mealId}','${it.id}','gluten','${v}');G.rfMeal('${mealId}')">${v==='yes'?'Yes':v==='no'?'No':'?'}</button>`).join('')}
+              </div></div>
+            <div class="fi-flag"><span>🥛</span>
+              <div class="fi-fopts">
+                ${['yes','no','?'].map(v=>`<button class="fi-fopt${lv===v?(v==='yes'?' fy':' fn'):''}"
+                  onclick="G.uFI('${mealId}','${it.id}','lactose','${v}');G.rfMeal('${mealId}')">${v==='yes'?'Yes':v==='no'?'No':'?'}</button>`).join('')}
+              </div></div>
+          </div>
+          <div class="fi-notes"><input type="text" value="${it.notes||''}" placeholder="Notes, e.g. lactose-free version"
+            oninput="G.uFI('${mealId}','${it.id}','notes',this.value)"></div>
+        </div>
+        <button class="edel" style="margin-top:2px;flex-shrink:0" onclick="G.delFI('${mealId}','${it.id}')">✕</button>
+      </div></div>`;
   }
 
   function noteSec(day) {
@@ -747,7 +811,7 @@ const G = (() => {
 
   function addBM(){
     const d=getDay(curD);
-    const b={id:uid(),tm:now(),bst:4,qty:'medium',liq:false,str:false,urg:false,inc:false,bleed:'none',peri:'none',col:'brown'};
+    const b={id:uid(),tm:now(),bst:4,qty:'medium',liq:false,str:false,urg:false,inc:false,bleed:'none',peri:'none',col:'brown',mucus:'none'};
     d.bms.push(b); putDay(curD,d); rDaily();
     setTimeout(()=>{const c=document.getElementById('bm-'+b.id);if(c){c.classList.add('open');c.scrollIntoView({behavior:'smooth',block:'nearest'});}},50);
   }
@@ -765,7 +829,7 @@ const G = (() => {
 
   function addMeal(){
     const d=getDay(curD);
-    const m={id:uid(),nm:'',tm:now(),notes:''};
+    const m={id:uid(),nm:'',tm:now(),items:[]};
     d.meals.push(m);putDay(curD,d);rDaily();
     setTimeout(()=>{const c=document.getElementById('ml-'+m.id);if(c){c.classList.add('open');c.scrollIntoView({behavior:'smooth',block:'nearest'});}},50);
   }
@@ -780,6 +844,30 @@ const G = (() => {
   }
   function delMed(id){const d=getDay(curD);d.meds=d.meds.filter(m=>m.id!==id);putDay(curD,d);rDaily();}
   function uMed(id,f,v){const d=getDay(curD);const m=d.meds.find(x=>x.id===id);if(!m)return;m[f]=v;putDay(curD,d);}
+
+  function addFI(mealId){
+    const d=getDay(curD);const m=d.meals.find(x=>x.id===mealId);if(!m)return;
+    if(!m.items)m.items=[];
+    m.items.push({id:uid(),food:'',qty:'',unit:'g',gluten:'?',lactose:'?',notes:''});
+    putDay(curD,d);rfMeal(mealId);
+  }
+  function delFI(mealId,itemId){
+    const d=getDay(curD);const m=d.meals.find(x=>x.id===mealId);if(!m)return;
+    m.items=(m.items||[]).filter(i=>i.id!==itemId);putDay(curD,d);rfMeal(mealId);
+  }
+  function uFI(mealId,itemId,field,value){
+    const d=getDay(curD);const m=d.meals.find(x=>x.id===mealId);if(!m)return;
+    const it=(m.items||[]).find(i=>i.id===itemId);if(!it)return;
+    it[field]=value;putDay(curD,d);
+  }
+  function rfMeal(mealId){
+    const d=getDay(curD);const m=d.meals.find(x=>x.id===mealId);if(!m)return;
+    const card=document.getElementById('ml-'+mealId);if(!card)return;
+    const wasOpen=card.classList.contains('open');
+    const tmp=document.createElement('div');tmp.innerHTML=mealCard(m);
+    const nc=tmp.firstElementChild;if(wasOpen)nc.classList.add('open');
+    card.replaceWith(nc);
+  }
 
   function tc(id){const c=document.getElementById(id);if(c)c.classList.toggle('open');}
   function odc(){updAlerts(curD);updProg(curD);}
@@ -937,7 +1025,12 @@ const G = (() => {
       ['Exercise',day.life?.exer||'—'],
       ['Hydration',`${day.life?.hydra??'—'} glasses`],
     ];
-    if(day.meals?.length)items.push(['Meals',day.meals.map(m=>m.nm||'(unnamed)').join(', ')]);
+    const mucusItems=bms.map((b,i)=>b.mucus&&b.mucus!=='none'?`BM${i+1}: ${b.mucus}`:null).filter(Boolean);
+    if(mucusItems.length)items.push(['Mucus',mucusItems.join(', ')]);
+    if(day.meals?.length)items.push(['Meals',day.meals.map(m=>{
+      const its=m.items||[];const g=its.filter(i=>i.gluten==='yes').length;const l=its.filter(i=>i.lactose==='yes').length;
+      return `${m.nm||'(unnamed)'}${its.length?` (${its.length} item${its.length>1?'s':''}${g?' 🌾':''}${l?' 🥛':''})` :''}`;
+    }).join(', ')]);
     if(day.meds?.length)items.push(['Meds',day.meds.map(m=>`${m.nm} ${m.dose}`).join(', ')]);
     if(day.note?.trim())items.push(['Notes',day.note]);
     document.getElementById('day-body').innerHTML=`
@@ -1114,9 +1207,9 @@ const G = (() => {
 
   function exCSV(from,to){
     const data=load();const dates=range(from,to);
-    const dcols='date,bm_count,liquid_bm_count,avg_bristol,avg_pain,pain_location,bloating,gas,nausea,heartburn,abd_mass,wellbeing,fatigue,fever,temperature,joint_pain,skin,eye_inflammation,mouth_ulcers,stress,sleep_hours,sleep_quality,nocturnal_symptoms,exercise,exercise_minutes,hydration,caffeine,alcohol,menstrual_day,weight,hbi_score,hbi_band,end_of_day_note';
+    const dcols='date,bm_count,liquid_bm_count,avg_bristol,avg_pain,pain_location,bloating,gas,nausea,heartburn,abd_mass,wellbeing,fatigue,fever,temperature,joint_pain,skin,eye_inflammation,mouth_ulcers,stress,sleep_hours,sleep_quality,nocturnal_symptoms,exercise,exercise_minutes,hydration,caffeine,alcohol,menstrual_day,weight,hbi_score,hbi_band,gluten_exposures,lactose_exposures,end_of_day_note';
     const drows=[dcols];
-    const bmcols='date,bm_number,time,bristol,bristol_label,quantity,liquid,straining,urgency,incomplete_evacuation,rectal_bleeding,perianal,colour';
+    const bmcols='date,bm_number,time,bristol,bristol_label,quantity,liquid,straining,urgency,incomplete_evacuation,rectal_bleeding,perianal,colour,mucus';
     const bmrows=[bmcols];
     for(const d of dates){
       const dd=data.days[d];if(!dd)continue;
@@ -1124,17 +1217,20 @@ const G = (() => {
       const ws=isoWeek(d);const h=hbi(ws);const wk=data.weeks[ws]||{};
       const bms=m.bms;
       const ab=bms.length?Math.round(bms.reduce((s,b)=>s+(b.bst||4),0)/bms.length*10)/10:'';
+      const allFI=m.meals.flatMap(ml=>(ml.items||[]));
+      const gluEx=allFI.filter(i=>i.gluten==='yes').length;
+      const lacEx=allFI.filter(i=>i.lactose==='yes').length;
       drows.push([d,bms.length,bms.filter(b=>b.liq).length,ab,
         m.sym.pain,m.sym.ploc,m.sym.bloat,m.sym.gas,m.sym.nausea,m.sym.hburn,m.sym.mass?1:0,
         m.sys.well,m.sys.fatigue,m.sys.fever?1:0,m.sys.temp||'',m.sys.jPain?1:0,
         m.sys.skin,m.sys.eye?1:0,m.sys.mouth?1:0,
         m.life.stress,m.life.sleepH||'',m.life.sleepQ||'',m.life.noct?1:0,
         m.life.exer,m.life.exerMin||'',m.life.hydra,m.life.caff,m.life.alco,m.life.men||'',
-        wk.weight||'',h?.total||'',h?.band||'',csv(m.note)].join(','));
+        wk.weight||'',h?.total||'',h?.band||'',gluEx,lacEx,csv(m.note)].join(','));
       bms.forEach((b,i)=>{
         bmrows.push([d,i+1,b.tm||'',b.bst||'',csv(BST[b.bst]?.l||''),
           b.qty||'',b.liq?1:0,b.str?1:0,b.urg?1:0,b.inc?1:0,
-          b.bleed||'none',b.peri||'none',b.col||'brown'].join(','));
+          b.bleed||'none',b.peri||'none',b.col||'brown',b.mucus||'none'].join(','));
       });
     }
     dl(drows.join('\n'),`guttracker_daily_${from}_${to}.csv`,'text/csv');
@@ -1183,7 +1279,12 @@ const G = (() => {
     row('Total BMs Logged',allBMs.length);
     cy(8);const bd={};allBMs.forEach(b=>{bd[b.bst]=(bd[b.bst]||0)+1;});
     doc.setFontSize(9);doc.setTextColor(100,110,130);doc.setFont('helvetica','normal');
-    doc.text('Distribution: '+[1,2,3,4,5,6,7].map(n=>`T${n}:${bd[n]||0}`).join(' '),M,y);y+=8;ln();
+    doc.text('Distribution: '+[1,2,3,4,5,6,7].map(n=>`T${n}:${bd[n]||0}`).join(' '),M,y);y+=7;
+    const mcnt={};allBMs.forEach(b=>{if(b.mucus&&b.mucus!=='none')mcnt[b.mucus]=(mcnt[b.mucus]||0)+1;});
+    const mtot=Object.values(mcnt).reduce((a,b)=>a+b,0);
+    if(mtot>0){cy(6);doc.setFontSize(9);doc.setTextColor(100,110,130);doc.setFont('helvetica','normal');
+      doc.text(`Mucus present: ${mtot} BMs — small: ${mcnt.small||0}, moderate: ${mcnt.moderate||0}, large: ${mcnt.large||0}`,M,y);y+=7;}
+    y+=2;ln();
 
     h1('c. Symptom Averages',12);y+=2;
     const sav=(f)=>{const v=logged.map(d=>merge(defDay(),data.days[d]).sym[f]||0);return v.length?Math.round(v.reduce((a,b)=>a+b,0)/v.length*10)/10:0;};
@@ -1218,13 +1319,41 @@ const G = (() => {
     else{doc.setFontSize(10);doc.setTextColor(120,130,150);doc.text('No medications logged.',M,y);y+=8;}
     y+=4;ln();
 
-    h1('h. Alarm Events',12);y+=2;
+    h1('h. Meals & Diet Log',12);y+=2;
+    let mealLogCount=0;
+    for(const d of logged){
+      const dayMeals=merge(defDay(),data.days[d]).meals;
+      if(!dayMeals.length)continue;
+      cy(10);doc.setFontSize(10);doc.setTextColor(180,120,10);doc.setFont('helvetica','bold');
+      doc.text(fmtS(d)+':',M,y);y+=5;
+      for(const ml of dayMeals){
+        const its=ml.items||[];
+        cy(7);doc.setFontSize(10);doc.setTextColor(20,30,60);doc.setFont('helvetica','bold');
+        doc.text(`  ${ml.nm||'Meal'}${ml.tm?' ('+ml.tm+')':''}`,M+2,y);y+=5;
+        if(its.length){
+          for(const it of its){
+            cy(5);doc.setFontSize(9);doc.setTextColor(60,70,90);doc.setFont('helvetica','normal');
+            const flags=[it.gluten==='yes'?'gluten':'',it.lactose==='yes'?'lactose':''].filter(Boolean).join(', ');
+            const ql=it.qty?` ${it.qty}${it.unit}`:'';
+            doc.text(`    • ${it.food||'?'}${ql}${flags?' ['+flags+']':''}`,M+2,y);y+=5;
+          }
+        } else {
+          cy(5);doc.setFontSize(9);doc.setTextColor(120,130,150);doc.setFont('helvetica','italic');
+          doc.text('    (no food items logged)',M+2,y);y+=5;
+        }
+        mealLogCount++;
+      }
+    }
+    if(!mealLogCount){doc.setFontSize(10);doc.setTextColor(120,130,150);doc.setFont('helvetica','normal');doc.text('No meals logged in this period.',M,y);y+=8;}
+    y+=4;ln();
+
+    h1('i. Alarm Events',12);y+=2;
     let alc=0;
     for(const d of logged){const fl=flags(d);if(fl.length){cy(12);doc.setFontSize(10);doc.setTextColor(180,40,40);doc.setFont('helvetica','bold');doc.text(fmtS(d)+':',M,y);y+=5;fl.forEach(f=>{cy(6);doc.setFontSize(9);doc.setTextColor(130,40,40);doc.setFont('helvetica','normal');doc.text('  ⚠ '+f,M,y);y+=5;});alc++;}}
     if(!alc){doc.setFontSize(10);doc.setTextColor(40,140,80);doc.setFont('helvetica','normal');doc.text('✓ No alarm events in this period.',M,y);y+=8;}
     y+=4;ln();
 
-    h1('i. End of Day Notes',12);y+=2;
+    h1('j. End of Day Notes',12);y+=2;
     let nc=0;
     for(const d of logged){const note=merge(defDay(),data.days[d]).note;if(note?.trim()){cy(12);doc.setFontSize(10);doc.setTextColor(180,120,10);doc.setFont('helvetica','bold');doc.text(fmtS(d)+':',M,y);y+=5;const lns=doc.splitTextToSize(note,W-M*2-10);lns.forEach(l=>{cy(5);doc.setFontSize(9);doc.setTextColor(50,60,80);doc.setFont('helvetica','normal');doc.text('  '+l,M,y);y+=5;});nc++;}}
     if(!nc){doc.setFontSize(10);doc.setTextColor(120,130,150);doc.text('No notes in this period.',M,y);}
@@ -1335,7 +1464,7 @@ const G = (() => {
   return {
     sw,pd,nd,gt,rr,
     addBM,delBM,uBM,rfBM,
-    addMeal,delMeal,uMeal,
+    addMeal,delMeal,uMeal,addFI,delFI,uFI,rfMeal,
     addMed,delMed,uMed,
     uSym,uSys,uLif,uNote,
     tc,odc,rDaily,
