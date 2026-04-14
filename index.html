@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CACHE_VERSION: 2 -->
+<!-- CACHE_VERSION: 3 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -103,11 +103,8 @@ option{background:var(--n1)}
 .tog input:checked+.ts::before{transform:translateX(20px)}
 
 /* SLIDER */
-.sr{display:flex;align-items:center;gap:10px}
-.sv{min-width:28px;height:28px;background:var(--amber);color:var(--navy);border-radius:6px;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-input[type=range]{flex:1;height:6px;background:var(--n2);border-radius:3px;border:none;outline:none;cursor:pointer;-webkit-appearance:none;appearance:none;padding:0}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;background:var(--amber);border-radius:50%;cursor:pointer;border:3px solid var(--navy)}
-input[type=range]::-moz-range-thumb{width:22px;height:22px;background:var(--amber);border-radius:50%;cursor:pointer;border:3px solid var(--navy)}
+.ni{min-height:44px;min-width:60px;width:100%;text-align:center;font-size:16px;font-weight:700;background:var(--n2);color:var(--amber);border:1.5px solid var(--border);border-radius:var(--rs);padding:8px 10px;box-sizing:border-box;-moz-appearance:textfield;}
+.ni::-webkit-outer-spin-button,.ni::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 
 /* RADIO */
 .rg{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
@@ -565,7 +562,7 @@ const G = (() => {
           }).join('')}</div>
         <div class="r2">
           <div class="fg"><label class="fl">Rectal Bleeding</label>
-            <select onchange="G.uBM('${b.id}','bleed',this.value);G.odc()">
+            <select onchange="const _bv=this.value,_bp='${b.bleed||'none'}';if((_bv==='mild'||_bv==='heavy')&&!confirm('You marked '+_bv+' bleeding, confirm?')){this.value=_bp;return;}G.uBM('${b.id}','bleed',_bv);G.odc()">
               <option value="none"${(!b.bleed||b.bleed==='none')?' selected':''}>None</option>
               <option value="spotting"${b.bleed==='spotting'?' selected':''}>Spotting</option>
               <option value="mild"${b.bleed==='mild'?' selected':''}>⚠️ Mild</option>
@@ -595,9 +592,7 @@ const G = (() => {
     const s=day.sym;
     return `<div class="sc"><div class="stitle">🫁 Abdominal Symptoms</div>
       <div class="fg"><label class="fl">Abdominal Pain (0–10 NRS)</label>
-        <div class="sr"><input type="range" min="0" max="10" value="${s.pain||0}"
-          oninput="this.nextElementSibling.textContent=this.value;G.uSym('pain',+this.value)">
-          <div class="sv">${s.pain||0}</div></div></div>
+        <input type="number" class="ni" min="0" max="10" value="${s.pain||0}" onchange="G.uSymN('pain',+this.value,this)"></div>
       <div class="fg"><label class="fl">Pain Location</label>
         <div class="rg">${['none','upper','lower','diffuse','RLQ'].map(v=>`
           <div class="ro"><input type="radio" name="ploc" id="pl-${v}" value="${v}"
@@ -606,12 +601,10 @@ const G = (() => {
         `).join('')}</div></div>
       ${[['bloat','Bloating',4],['gas','Gas / Flatulence',4],['nausea','Nausea',4],['hburn','Heartburn / Reflux',4]].map(([k,lbl,mx])=>`
         <div class="fg"><label class="fl">${lbl} (0–${mx})</label>
-          <div class="sr"><input type="range" min="0" max="${mx}" value="${s[k]||0}"
-            oninput="this.nextElementSibling.textContent=this.value;G.uSym('${k}',+this.value)">
-            <div class="sv">${s[k]||0}</div></div></div>`).join('')}
+          <input type="number" class="ni" min="0" max="${mx}" value="${s[k]||0}" onchange="G.uSymN('${k}',+this.value,this)"></div>`).join('')}
       <div class="fg"><label class="fl">Abdominal Mass Felt?</label>
         <div class="yng">
-          <button class="ynb yes${s.mass?' on':''}" onclick="G.uSym('mass',true);G.rr()">Yes</button>
+          <button class="ynb yes${s.mass?' on':''}" onclick="if(!confirm('You marked abdominal mass felt, confirm?'))return;G.uSym('mass',true);G.rr()">Yes</button>
           <button class="ynb no${!s.mass?' on':''}" onclick="G.uSym('mass',false);G.rr()">No</button>
         </div></div></div>`;
   }
@@ -626,9 +619,7 @@ const G = (() => {
             ${y.well===v?'checked':''} onchange="G.uSys('well',+this.value)">
             <label for="wb-${v}">${v}: ${lbl}</label></div>`).join('')}</div></div>
       <div class="fg"><label class="fl">Fatigue (0–10)</label>
-        <div class="sr"><input type="range" min="0" max="10" value="${y.fatigue||0}"
-          oninput="this.nextElementSibling.textContent=this.value;G.uSys('fatigue',+this.value)">
-          <div class="sv">${y.fatigue||0}</div></div></div>
+        <input type="number" class="ni" min="0" max="10" value="${y.fatigue||0}" onchange="G.uSysN('fatigue',+this.value,this)"></div>
       <div class="trow"><span class="tl">Fever / Felt Feverish</span>
         <label class="tog"><input type="checkbox" ${y.fever?'checked':''}
           onchange="G.uSys('fever',this.checked);G.rr()">
@@ -642,9 +633,7 @@ const G = (() => {
             onchange="G.uSys('jPain',this.checked);G.rr()">
             <span class="ts"></span></label></div>
         ${y.jPain?`<div class="fg" style="margin-top:8px"><label class="fl">Joint Severity (0–4)</label>
-          <div class="sr"><input type="range" min="0" max="4" value="${y.jSev||0}"
-            oninput="this.nextElementSibling.textContent=this.value;G.uSys('jSev',+this.value)">
-            <div class="sv">${y.jSev||0}</div></div></div>`:''}
+          <input type="number" class="ni" min="0" max="4" value="${y.jSev||0}" onchange="G.uSysN('jSev',+this.value,this)"></div>`:''}
         <div class="fg"><label class="fl">Skin Symptoms</label>
           <div class="rg">${['none','rash','erythema nodosum','other'].map(v=>`
             <div class="ro"><input type="radio" name="skin" id="sk-${v}" value="${v}"
@@ -664,17 +653,13 @@ const G = (() => {
     const l=day.life;
     return `<div class="sc"><div class="stitle">🏃 Lifestyle</div>
       <div class="fg"><label class="fl">Stress Level (1–5)</label>
-        <div class="sr"><input type="range" min="1" max="5" value="${l.stress||3}"
-          oninput="this.nextElementSibling.textContent=this.value;G.uLif('stress',+this.value)">
-          <div class="sv">${l.stress||3}</div></div></div>
+        <input type="number" class="ni" min="1" max="5" value="${l.stress||3}" onchange="G.uLifN('stress',+this.value,this)"></div>
       <div class="r2">
         <div class="fg"><label class="fl">Sleep Hours</label>
           <input type="number" min="0" max="24" step="0.5" value="${l.sleepH||''}" placeholder="hrs"
             onchange="G.uLif('sleepH',this.value!==''?+this.value:'')"></div>
         <div class="fg"><label class="fl">Sleep Quality (1–5)</label>
-          <div class="sr"><input type="range" min="1" max="5" value="${l.sleepQ||3}"
-            oninput="this.nextElementSibling.textContent=this.value;G.uLif('sleepQ',+this.value)">
-            <div class="sv">${l.sleepQ||3}</div></div></div></div>
+          <input type="number" class="ni" min="1" max="5" value="${l.sleepQ||3}" onchange="G.uLifN('sleepQ',+this.value,this)"></div></div>
       <div class="trow"><span class="tl">⚠️ GI Symptoms Woke Me From Sleep</span>
         <label class="tog"><input type="checkbox" ${l.noct?'checked':''}
           onchange="G.uLif('noct',this.checked);G.odc()"><span class="ts"></span></label></div>
@@ -687,18 +672,12 @@ const G = (() => {
           <input type="number" min="0" max="600" value="${l.exerMin||''}" placeholder="Minutes"
             onchange="G.uLif('exerMin',this.value!==''?+this.value:'')"></div>`:''}</div>
       <div class="fg"><label class="fl">Hydration (glasses of water, 0–15)</label>
-        <div class="sr"><input type="range" min="0" max="15" value="${l.hydra||0}"
-          oninput="this.nextElementSibling.textContent=this.value;G.uLif('hydra',+this.value)">
-          <div class="sv">${l.hydra||0}</div></div></div>
+        <input type="number" class="ni" min="0" max="15" value="${l.hydra||0}" onchange="G.uLifN('hydra',+this.value,this)"></div>
       <div class="r2">
         <div class="fg"><label class="fl">Caffeine Drinks (0–10)</label>
-          <div class="sr"><input type="range" min="0" max="10" value="${l.caff||0}"
-            oninput="this.nextElementSibling.textContent=this.value;G.uLif('caff',+this.value)">
-            <div class="sv">${l.caff||0}</div></div></div>
+          <input type="number" class="ni" min="0" max="10" value="${l.caff||0}" onchange="G.uLifN('caff',+this.value,this)"></div>
         <div class="fg"><label class="fl">Alcohol Drinks (0–5)</label>
-          <div class="sr"><input type="range" min="0" max="5" value="${l.alco||0}"
-            oninput="this.nextElementSibling.textContent=this.value;G.uLif('alco',+this.value)">
-            <div class="sv">${l.alco||0}</div></div></div></div>
+          <input type="number" class="ni" min="0" max="5" value="${l.alco||0}" onchange="G.uLifN('alco',+this.value,this)"></div></div>
       ${s.showMen?`<div class="fg"><label class="fl">Menstrual Cycle Day (1–35)</label>
         <input type="number" min="1" max="35" value="${l.men||''}" placeholder="1–35 or leave blank"
           onchange="G.uLif('men',this.value!==''?+this.value:'')"></div>`:''}</div>`;
@@ -808,6 +787,16 @@ const G = (() => {
   function uSys(f,v){const d=getDay(curD);d.sys[f]=v;putDay(curD,d);updProg(curD);updAlerts(curD);}
   function uLif(f,v){const d=getDay(curD);d.life[f]=v;putDay(curD,d);updProg(curD);updAlerts(curD);}
   function uNote(v){const d=getDay(curD);d.note=v;putDay(curD,d);updProg(curD);}
+  function uSymN(f,v,el){
+    if(f==='pain'&&v>=8&&!confirm('You entered pain '+v+'/10, confirm?')){el.value=getDay(curD).sym[f]||0;return;}
+    uSym(f,v);
+  }
+  function uSysN(f,v,el){uSys(f,v);}
+  function uLifN(f,v,el){
+    if(f==='stress'&&v===5&&!confirm('You entered max stress, confirm?')){el.value=getDay(curD).life[f]||3;return;}
+    if(f==='alco'&&v>=3&&!confirm('You entered '+v+' alcoholic drinks, confirm?')){el.value=getDay(curD).life[f]||0;return;}
+    uLif(f,v);
+  }
 
   function addBM(){
     const d=getDay(curD);
@@ -1466,7 +1455,7 @@ const G = (() => {
     addBM,delBM,uBM,rfBM,
     addMeal,delMeal,uMeal,addFI,delFI,uFI,rfMeal,
     addMed,delMed,uMed,
-    uSym,uSys,uLif,uNote,
+    uSym,uSys,uLif,uSymN,uSysN,uLifN,uNote,
     tc,odc,rDaily,
     uWk,uPro,
     pM,nM,showDay,

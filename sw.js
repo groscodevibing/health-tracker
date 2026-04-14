@@ -1,5 +1,5 @@
-// CACHE_VERSION: 2
-const CACHE = 'guttracker-v2';
+// CACHE_VERSION: 3
+const CACHE = 'guttracker-v3';
 const ASSETS = ['/', '/index.html', '/manifest.json'];
 
 self.addEventListener('install', e => {
